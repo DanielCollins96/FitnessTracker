@@ -1,0 +1,253 @@
+import express, { type Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, workoutWithExercisesSchema } from "@shared/schema";
+import { format } from "date-fns";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  const router = express.Router();
+
+  // Workout routes
+  router.get("/workouts", async (req, res) => {
+    try {
+      const workouts = await storage.getWorkouts();
+      res.json(workouts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workouts" });
+    }
+  });
+
+  router.get("/workouts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const workout = await storage.getWorkout(id);
+      if (!workout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.json(workout);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout" });
+    }
+  });
+
+  router.post("/workouts", async (req, res) => {
+    try {
+      const validatedData = insertWorkoutSchema.parse(req.body);
+      const workout = await storage.createWorkout(validatedData);
+      res.status(201).json(workout);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid workout data" });
+    }
+  });
+
+  router.put("/workouts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertWorkoutSchema.partial().parse(req.body);
+      const workout = await storage.updateWorkout(id, validatedData);
+      if (!workout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.json(workout);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid workout data" });
+    }
+  });
+
+  router.delete("/workouts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteWorkout(id);
+      if (!result) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workout" });
+    }
+  });
+
+  // Exercise routes
+  router.get("/workouts/:workoutId/exercises", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      const exercises = await storage.getExercises(workoutId);
+      res.json(exercises);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercises" });
+    }
+  });
+
+  router.post("/exercises", async (req, res) => {
+    try {
+      const validatedData = insertExerciseSchema.parse(req.body);
+      const exercise = await storage.createExercise(validatedData);
+      res.status(201).json(exercise);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid exercise data" });
+    }
+  });
+
+  router.put("/exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertExerciseSchema.partial().parse(req.body);
+      const exercise = await storage.updateExercise(id, validatedData);
+      if (!exercise) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      res.json(exercise);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid exercise data" });
+    }
+  });
+
+  router.delete("/exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteExercise(id);
+      if (!result) {
+        return res.status(404).json({ message: "Exercise not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete exercise" });
+    }
+  });
+
+  // Goal routes
+  router.get("/goals", async (req, res) => {
+    try {
+      const goals = await storage.getGoals();
+      res.json(goals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch goals" });
+    }
+  });
+
+  router.post("/goals", async (req, res) => {
+    try {
+      const validatedData = insertGoalSchema.parse(req.body);
+      const goal = await storage.createGoal(validatedData);
+      res.status(201).json(goal);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid goal data" });
+    }
+  });
+
+  router.put("/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertGoalSchema.partial().parse(req.body);
+      const goal = await storage.updateGoal(id, validatedData);
+      if (!goal) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      res.json(goal);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid goal data" });
+    }
+  });
+
+  router.delete("/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteGoal(id);
+      if (!result) {
+        return res.status(404).json({ message: "Goal not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete goal" });
+    }
+  });
+
+  // Combined routes
+  router.post("/workout-with-exercises", async (req, res) => {
+    try {
+      // Parse the date string to a Date object
+      if (req.body.workout.date && typeof req.body.workout.date === 'string') {
+        req.body.workout.date = new Date(req.body.workout.date);
+      }
+      
+      const validatedData = workoutWithExercisesSchema.parse(req.body);
+      const result = await storage.createWorkoutWithExercises(validatedData);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating workout with exercises:", error);
+      res.status(400).json({ message: "Invalid workout or exercise data" });
+    }
+  });
+
+  router.get("/workout-with-exercises/:workoutId", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      const result = await storage.getWorkoutWithExercises(workoutId);
+      if (!result) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout with exercises" });
+    }
+  });
+
+  router.get("/recent-workouts", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const workouts = await storage.getRecentWorkouts(limit);
+      
+      // Format the data for frontend consumption
+      const formattedWorkouts = workouts.map(({ workout, exercises }) => {
+        const formattedDate = format(new Date(workout.date), "MMM d, yyyy");
+        return {
+          id: workout.id,
+          name: workout.name,
+          date: formattedDate,
+          duration: workout.duration,
+          exerciseCount: exercises.length,
+          exercises: exercises.map(e => e.name).slice(0, 3),
+          totalExercises: exercises.length
+        };
+      });
+      
+      res.json(formattedWorkouts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch recent workouts" });
+    }
+  });
+
+  // Progress tracking routes
+  router.get("/exercise-history/:exerciseName", async (req, res) => {
+    try {
+      const exerciseName = req.params.exerciseName;
+      const history = await storage.getExerciseHistory(exerciseName);
+      res.json(history);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercise history" });
+    }
+  });
+
+  router.get("/exercise-sets/:exerciseName", async (req, res) => {
+    try {
+      const exerciseName = req.params.exerciseName;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      const sets = await storage.getExerciseSets(exerciseName, limit);
+      
+      // Format the dates for frontend display
+      const formattedSets = sets.map(set => ({
+        ...set,
+        formattedDate: format(new Date(set.date), "MMM d")
+      }));
+      
+      res.json(formattedSets);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercise sets" });
+    }
+  });
+
+  app.use("/api", router);
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
