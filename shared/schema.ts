@@ -17,6 +17,24 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Exercise Types table
+export const exerciseTypes = pgTable("exercise_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  notes: text("notes"),
+  category: text("category"),
+  created: timestamp("created").notNull().defaultNow(),
+});
+
+export const insertExerciseTypeSchema = createInsertSchema(exerciseTypes).omit({
+  id: true,
+  created: true
+});
+
+export type InsertExerciseType = z.infer<typeof insertExerciseTypeSchema>;
+export type ExerciseType = typeof exerciseTypes.$inferSelect;
+
 // Workouts table
 export const workouts = pgTable("workouts", {
   id: serial("id").primaryKey(),

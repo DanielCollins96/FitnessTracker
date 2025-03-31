@@ -1,4 +1,4 @@
-import { InsertExercise, Exercise, InsertWorkout, Workout, InsertGoal, Goal, WorkoutWithExercises } from "@shared/schema";
+import { InsertExercise, Exercise, InsertWorkout, Workout, InsertGoal, Goal, WorkoutWithExercises, InsertExerciseType, ExerciseType } from "@shared/schema";
 
 export interface IStorage {
   // Workout operations
@@ -14,6 +14,14 @@ export interface IStorage {
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: number, exercise: Partial<InsertExercise>): Promise<Exercise | undefined>;
   deleteExercise(id: number): Promise<boolean>;
+  
+  // Exercise Type operations
+  getExerciseTypes(): Promise<ExerciseType[]>;
+  getExerciseType(id: number): Promise<ExerciseType | undefined>;
+  getExerciseTypeByName(name: string): Promise<ExerciseType | undefined>;
+  createExerciseType(exerciseType: InsertExerciseType): Promise<ExerciseType>;
+  updateExerciseType(id: number, exerciseType: Partial<InsertExerciseType>): Promise<ExerciseType | undefined>;
+  deleteExerciseType(id: number): Promise<boolean>;
   
   // Goal operations
   getGoals(): Promise<Goal[]>;
@@ -36,17 +44,30 @@ export class MemStorage implements IStorage {
   private workouts: Map<number, Workout>;
   private exercises: Map<number, Exercise>;
   private goals: Map<number, Goal>;
+  private exerciseTypes: Map<number, ExerciseType>;
   private workoutIdCounter: number;
   private exerciseIdCounter: number;
   private goalIdCounter: number;
+  private exerciseTypeIdCounter: number;
+
+  // Exercise Type method definitions for use in constructor
+  private _createExerciseType(exerciseType: InsertExerciseType): ExerciseType {
+    const id = this.exerciseTypeIdCounter++;
+    const created = new Date();
+    const newExerciseType: ExerciseType = { ...exerciseType, id, created };
+    this.exerciseTypes.set(id, newExerciseType);
+    return newExerciseType;
+  }
 
   constructor() {
     this.workouts = new Map();
     this.exercises = new Map();
     this.goals = new Map();
+    this.exerciseTypes = new Map();
     this.workoutIdCounter = 1;
     this.exerciseIdCounter = 1;
     this.goalIdCounter = 1;
+    this.exerciseTypeIdCounter = 1;
     
     // Add some initial goals for demo
     this.createGoal({
@@ -62,6 +83,28 @@ export class MemStorage implements IStorage {
       targetWeight: 185,
       currentProgress: 165,
       targetDate: new Date("2024-01-31")
+    });
+    
+    // Add some initial exercise types
+    this._createExerciseType({
+      name: "Bench Press",
+      description: "A compound chest exercise",
+      notes: "Keep shoulders back and down, feet planted firmly on the ground",
+      category: "Chest"
+    });
+    
+    this._createExerciseType({
+      name: "Squat",
+      description: "A compound lower body exercise",
+      notes: "Keep your knees tracking over your toes, maintain a neutral spine",
+      category: "Legs"
+    });
+    
+    this._createExerciseType({
+      name: "Deadlift",
+      description: "A compound posterior chain exercise",
+      notes: "Start with the bar over mid-foot, keep the bar close to your body",
+      category: "Back"
     });
   }
 
@@ -125,6 +168,40 @@ export class MemStorage implements IStorage {
 
   async deleteExercise(id: number): Promise<boolean> {
     return this.exercises.delete(id);
+  }
+  
+  // Exercise Type methods
+  async getExerciseTypes(): Promise<ExerciseType[]> {
+    return [...this.exerciseTypes.values()];
+  }
+
+  async getExerciseType(id: number): Promise<ExerciseType | undefined> {
+    return this.exerciseTypes.get(id);
+  }
+
+  async getExerciseTypeByName(name: string): Promise<ExerciseType | undefined> {
+    return [...this.exerciseTypes.values()].find(et => et.name === name);
+  }
+
+  async createExerciseType(exerciseType: InsertExerciseType): Promise<ExerciseType> {
+    const id = this.exerciseTypeIdCounter++;
+    const created = new Date();
+    const newExerciseType: ExerciseType = { ...exerciseType, id, created };
+    this.exerciseTypes.set(id, newExerciseType);
+    return newExerciseType;
+  }
+
+  async updateExerciseType(id: number, exerciseType: Partial<InsertExerciseType>): Promise<ExerciseType | undefined> {
+    const existingExerciseType = this.exerciseTypes.get(id);
+    if (!existingExerciseType) return undefined;
+    
+    const updatedExerciseType = { ...existingExerciseType, ...exerciseType };
+    this.exerciseTypes.set(id, updatedExerciseType);
+    return updatedExerciseType;
+  }
+
+  async deleteExerciseType(id: number): Promise<boolean> {
+    return this.exerciseTypes.delete(id);
   }
 
   // Goal methods

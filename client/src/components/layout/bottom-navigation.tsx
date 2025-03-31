@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Home, PlusCircle, Clock, BarChart } from "lucide-react";
+import { Home, PlusCircle, Clock, BarChart, Dumbbell } from "lucide-react";
 
 interface BottomNavigationProps {
   currentPath: string;
@@ -35,6 +35,12 @@ export default function BottomNavigation({ currentPath }: BottomNavigationProps)
             label="Progress" 
             href="/progress" 
             isActive={isActive("/progress")} 
+          />
+          <NavButton 
+            icon={<Dumbbell className="h-6 w-6" />} 
+            label="Exercises" 
+            href="/exercises" 
+            isActive={isActive("/exercises")} 
           />
         </div>
       </div>

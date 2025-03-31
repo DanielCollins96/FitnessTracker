@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Workout from "@/pages/workout";
 import History from "@/pages/history";
 import Progress from "@/pages/progress";
+import Exercises from "@/pages/exercises";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
           <Route path="/workout" component={Workout} />
           <Route path="/history" component={History} />
           <Route path="/progress" component={Progress} />
+          <Route path="/exercises" component={Exercises} />
           <Route component={NotFound} />
         </Switch>
       </main>

@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, workoutWithExercisesSchema } from "@shared/schema";
+import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, workoutWithExercisesSchema, insertExerciseTypeSchema } from "@shared/schema";
 import { format } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -112,6 +112,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete exercise" });
+    }
+  });
+
+  // Exercise Type routes
+  router.get("/exercise-types", async (req, res) => {
+    try {
+      const exerciseTypes = await storage.getExerciseTypes();
+      res.json(exerciseTypes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercise types" });
+    }
+  });
+
+  router.get("/exercise-types/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const exerciseType = await storage.getExerciseType(id);
+      if (!exerciseType) {
+        return res.status(404).json({ message: "Exercise type not found" });
+      }
+      res.json(exerciseType);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercise type" });
+    }
+  });
+
+  router.get("/exercise-types/by-name/:name", async (req, res) => {
+    try {
+      const name = req.params.name;
+      const exerciseType = await storage.getExerciseTypeByName(name);
+      if (!exerciseType) {
+        return res.status(404).json({ message: "Exercise type not found" });
+      }
+      res.json(exerciseType);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercise type" });
+    }
+  });
+
+  router.post("/exercise-types", async (req, res) => {
+    try {
+      const validatedData = insertExerciseTypeSchema.parse(req.body);
+      const exerciseType = await storage.createExerciseType(validatedData);
+      res.status(201).json(exerciseType);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid exercise type data" });
+    }
+  });
+
+  router.put("/exercise-types/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertExerciseTypeSchema.partial().parse(req.body);
+      const exerciseType = await storage.updateExerciseType(id, validatedData);
+      if (!exerciseType) {
+        return res.status(404).json({ message: "Exercise type not found" });
+      }
+      res.json(exerciseType);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid exercise type data" });
+    }
+  });
+
+  router.delete("/exercise-types/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteExerciseType(id);
+      if (!result) {
+        return res.status(404).json({ message: "Exercise type not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete exercise type" });
     }
   });
 
