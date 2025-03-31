@@ -53,6 +53,9 @@ export default function Workout() {
   // Default exercise name
   const defaultExerciseName = exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
 
+  // State to track initial loading
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   // Define form with defaults
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutFormSchema),
@@ -66,11 +69,39 @@ export default function Workout() {
       exercises: [
         {
           name: defaultExerciseName,
-          sets: [{ weight: 135, reps: 10 }],
+          sets: [{ weight: 0, reps: 0 }],
         },
       ],
     },
   });
+  
+  // Initialize first exercise with last used values if available
+  useEffect(() => {
+    // Only run this once when exercise types are loaded
+    if (exerciseTypeNames.length > 0 && !isInitialized) {
+      const initializeWithLastUsed = async () => {
+        const defaultName = exerciseTypeNames[0];
+        try {
+          const response = await fetch(`/api/exercise-latest/${encodeURIComponent(defaultName)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.weight > 0) {
+              // Update form with the last used values
+              form.setValue('exercises.0.name', defaultName);
+              form.setValue('exercises.0.sets.0.weight', data.weight);
+              form.setValue('exercises.0.sets.0.reps', data.reps);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching initial last used values:", error);
+        } finally {
+          setIsInitialized(true);
+        }
+      };
+      
+      initializeWithLastUsed();
+    }
+  }, [exerciseTypeNames, form, isInitialized]);
 
   // Mutation to save the workout
   const saveWorkout = useMutation({
@@ -223,10 +254,35 @@ export default function Workout() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => appendExercise({ 
-                      name: exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "", 
-                      sets: [{ weight: 0, reps: 0 }] 
-                    })}
+                    onClick={async () => {
+                      const defaultName = exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
+                      
+                      // Try to fetch last used values for the default exercise
+                      if (defaultName) {
+                        try {
+                          const response = await fetch(`/api/exercise-latest/${encodeURIComponent(defaultName)}`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            if (data.weight > 0) {
+                              // If we have last used values, use them
+                              appendExercise({ 
+                                name: defaultName, 
+                                sets: [{ weight: data.weight, reps: data.reps }] 
+                              });
+                              return;
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Error fetching last used values:", error);
+                        }
+                      }
+                      
+                      // Fallback to default values
+                      appendExercise({ 
+                        name: defaultName, 
+                        sets: [{ weight: 0, reps: 0 }] 
+                      });
+                    }}
                     className="mt-2 text-primary font-medium flex items-center"
                   >
                     <Plus className="h-5 w-5 mr-1" />

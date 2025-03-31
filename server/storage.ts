@@ -38,6 +38,7 @@ export interface IStorage {
   // Progress tracking operations
   getExerciseHistory(exerciseName: string): Promise<{ date: Date, weight: number, reps: number }[]>;
   getExerciseSets(exerciseName: string, limit: number): Promise<{ date: Date, weight: number, reps: number }[]>;
+  getLatestExerciseSet(exerciseName: string): Promise<{ weight: number, reps: number } | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -300,6 +301,53 @@ export class MemStorage implements IStorage {
   async getExerciseSets(exerciseName: string, limit: number): Promise<{ date: Date, weight: number, reps: number }[]> {
     const history = await this.getExerciseHistory(exerciseName);
     return history.slice(-limit);
+  }
+  
+  async getLatestExerciseSet(exerciseName: string): Promise<{ weight: number, reps: number } | null> {
+    // Get all exercises with the given name
+    const allExercises = [...this.exercises.values()].filter(e => e.name === exerciseName);
+    
+    if (allExercises.length === 0) {
+      return null;
+    }
+    
+    // Get the workouts to sort by date
+    const workoutsMap = new Map([...this.workouts.entries()]);
+    
+    // Sort exercises by workout date, newest first
+    const sortedExercises = allExercises
+      .filter(exercise => {
+        const workout = workoutsMap.get(exercise.workoutId);
+        return workout !== undefined;
+      })
+      .sort((a, b) => {
+        const workoutA = workoutsMap.get(a.workoutId);
+        const workoutB = workoutsMap.get(b.workoutId);
+        
+        if (!workoutA || !workoutB) return 0;
+        
+        return new Date(workoutB.date).getTime() - new Date(workoutA.date).getTime();
+      });
+    
+    // No exercises found with corresponding workout
+    if (sortedExercises.length === 0) {
+      return null;
+    }
+    
+    // Get the most recent exercise
+    const latestExercise = sortedExercises[0];
+    
+    // Find the heaviest set from this exercise
+    const heaviestSet = [...latestExercise.sets].sort((a, b) => b.weight - a.weight)[0];
+    
+    if (!heaviestSet) {
+      return null;
+    }
+    
+    return {
+      weight: heaviestSet.weight,
+      reps: heaviestSet.reps
+    };
   }
 }
 

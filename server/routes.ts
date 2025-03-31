@@ -318,6 +318,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch exercise sets" });
     }
   });
+  
+  // Get the latest weight and reps for a specific exercise
+  router.get("/exercise-latest/:exerciseName", async (req, res) => {
+    try {
+      const exerciseName = req.params.exerciseName;
+      const latestSet = await storage.getLatestExerciseSet(exerciseName);
+      
+      if (latestSet) {
+        res.json(latestSet);
+      } else {
+        // Return default values if no previous data exists
+        res.json({
+          weight: 0,
+          reps: 0
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching latest exercise data:", error);
+      res.status(500).json({ message: "Failed to fetch latest exercise data" });
+    }
+  });
 
   app.use("/api", router);
 
