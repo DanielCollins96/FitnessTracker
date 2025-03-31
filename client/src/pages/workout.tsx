@@ -1,42 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { CalendarIcon, Plus, Minus, Trash2 } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { CalendarIcon, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import NumberInput from "@/components/ui/number-input";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
 import ExerciseForm from "@/components/workout/exercise-form";
-
-// Common exercise types
-const EXERCISE_TYPES = [
-  "Bench Press",
-  "Squat",
-  "Deadlift",
-  "Shoulder Press",
-  "Pull-ups",
-  "Leg Press",
-  "Bicep Curls",
-  "Tricep Extensions",
-  "Lat Pulldown",
-  "Leg Curls",
-  "Chest Fly",
-  "Dumbbell Row",
-];
 
 // Form schema
 const workoutFormSchema = z.object({
@@ -60,6 +41,17 @@ type WorkoutFormValues = z.infer<typeof workoutFormSchema>;
 export default function Workout() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  
+  // Fetch exercise types from API
+  const { data: exerciseTypes, isLoading: isLoadingExerciseTypes } = useQuery<{ id: number; name: string; description: string | null; notes: string | null; category: string | null; created: string }[]>({
+    queryKey: ['/api/exercise-types'],
+  });
+  
+  // Extract exercise names for dropdown
+  const exerciseTypeNames = exerciseTypes?.map(type => type.name) || [];
+  
+  // Default exercise name
+  const defaultExerciseName = exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
 
   // Define form with defaults
   const form = useForm<WorkoutFormValues>({
@@ -73,7 +65,7 @@ export default function Workout() {
       },
       exercises: [
         {
-          name: "Bench Press",
+          name: defaultExerciseName,
           sets: [{ weight: 135, reps: 10 }],
         },
       ],
@@ -114,6 +106,37 @@ export default function Workout() {
       control: form.control,
       name: "exercises",
     });
+
+  // Effect to update the default exercise when exercise types load
+  useEffect(() => {
+    if (exerciseTypes && exerciseTypes.length > 0 && form.getValues('exercises').length > 0) {
+      const currentName = form.getValues('exercises')[0].name;
+      if (!currentName && exerciseTypes.length > 0) {
+        form.setValue('exercises.0.name', exerciseTypes[0].name);
+      }
+    }
+  }, [exerciseTypes, form]);
+
+  // Loading state
+  if (isLoadingExerciseTypes) {
+    return (
+      <div className="px-4 py-6">
+        <div className="mb-6">
+          <div className="flex items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Add Workout</h2>
+          </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-500">Loading exercise library...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-6">
@@ -192,7 +215,7 @@ export default function Workout() {
                       key={field.id}
                       index={index}
                       form={form}
-                      exerciseTypes={EXERCISE_TYPES}
+                      exerciseTypes={exerciseTypeNames}
                       onRemove={() => removeExercise(index)}
                     />
                   ))}
@@ -200,7 +223,10 @@ export default function Workout() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => appendExercise({ name: "", sets: [{ weight: 0, reps: 0 }] })}
+                    onClick={() => appendExercise({ 
+                      name: exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "", 
+                      sets: [{ weight: 0, reps: 0 }] 
+                    })}
                     className="mt-2 text-primary font-medium flex items-center"
                   >
                     <Plus className="h-5 w-5 mr-1" />
