@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeDatabase } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +38,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize the database first
+  try {
+    log("Initializing database...");
+    const dbInitialized = await initializeDatabase();
+    log(`Database initialized: ${dbInitialized ? "Success" : "Failed, using in-memory storage"}`);
+  } catch (error) {
+    log(`Database initialization error: ${error}`);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
