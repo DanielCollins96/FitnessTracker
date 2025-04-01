@@ -9,6 +9,8 @@ interface NumberInputProps {
   min?: number;
   max?: number;
   step?: number;
+  allowDecimal?: boolean;
+  precision?: number;
 }
 
 export default function NumberInput({
@@ -16,27 +18,50 @@ export default function NumberInput({
   onChange,
   min = 0,
   max = 1000,
-  step = 5
+  step = 5,
+  allowDecimal = false,
+  precision = 2
 }: NumberInputProps) {
+  // Round the value to the specified precision
+  const roundToDecimal = (num: number): number => {
+    const factor = Math.pow(10, precision);
+    return Math.round(num * factor) / factor;
+  };
+  
+  const displayValue = allowDecimal 
+    ? value % 1 === 0 ? value.toFixed(0) : value.toFixed(precision)
+    : value;
+
   const handleIncrement = () => {
-    const newValue = value + step;
+    const newValue = roundToDecimal(value + step);
     if (max === undefined || newValue <= max) {
       onChange(newValue);
     }
   };
 
   const handleDecrement = () => {
-    const newValue = value - step;
+    const newValue = roundToDecimal(value - step);
     if (min === undefined || newValue >= min) {
       onChange(newValue);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseInt(e.target.value);
+    // Use parseFloat instead of parseInt for decimal support
+    const inputValue = e.target.value;
+    
+    if (inputValue === '') {
+      onChange(0);
+      return;
+    }
+    
+    const parseFunc = allowDecimal ? parseFloat : parseInt;
+    const newValue = parseFunc(inputValue);
+    
     if (!isNaN(newValue)) {
-      if ((min === undefined || newValue >= min) && (max === undefined || newValue <= max)) {
-        onChange(newValue);
+      const roundedValue = allowDecimal ? roundToDecimal(newValue) : newValue;
+      if ((min === undefined || roundedValue >= min) && (max === undefined || roundedValue <= max)) {
+        onChange(roundedValue);
       }
     }
   };
@@ -54,12 +79,12 @@ export default function NumberInput({
       </Button>
       <Input
         type="number"
-        value={value}
+        value={displayValue}
         onChange={handleInputChange}
         className="rounded-none text-center border-x-0"
         min={min}
         max={max}
-        step={step}
+        step={allowDecimal ? 0.01 : step}
       />
       <Button
         type="button"

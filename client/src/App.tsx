@@ -22,6 +22,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/workout" component={Workout} />
+          <Route path="/edit-workout/:id" component={Workout} />
           <Route path="/history" component={History} />
           <Route path="/progress" component={Progress} />
           <Route path="/exercises" component={Exercises} />

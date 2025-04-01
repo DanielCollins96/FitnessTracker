@@ -186,7 +186,9 @@ export default function ExerciseForm({ index, form, exerciseTypes, onRemove }: E
                 value={form.watch(`exercises.${index}.sets.${setIndex}.weight`)}
                 onChange={(value) => form.setValue(`exercises.${index}.sets.${setIndex}.weight`, value)}
                 min={0}
-                step={5}
+                step={2.5}
+                allowDecimal={true}
+                precision={2}
               />
               {form.formState.errors.exercises?.[index]?.sets?.[setIndex]?.weight && (
                 <p className="text-sm text-red-500 mt-1">

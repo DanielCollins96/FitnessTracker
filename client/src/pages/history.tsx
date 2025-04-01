@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Pencil } from "lucide-react";
 
 interface WorkoutHistoryItem {
   id: number;
@@ -118,8 +120,22 @@ interface WorkoutHistoryItemProps {
 }
 
 function WorkoutHistoryItem({ workout }: WorkoutHistoryItemProps) {
+  // For navigation
+  const [_, setLocation] = useLocation();
+  
   // Extract day from the date string (e.g., "Nov 18, 2023" -> "18")
   const day = workout.date.split(' ')[1].replace(',', '');
+  
+  // Handler for viewing details
+  const handleViewDetails = () => {
+    // Navigate to a detailed view if needed
+    console.log("View details for workout:", workout.id);
+  };
+  
+  // Handler for editing workout
+  const handleEdit = () => {
+    setLocation(`/edit-workout/${workout.id}`);
+  };
   
   return (
     <Card className="p-4">
@@ -136,9 +152,25 @@ function WorkoutHistoryItem({ workout }: WorkoutHistoryItemProps) {
             <span className="text-xs text-gray-500">{workout.duration} min</span>
           </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
-          <ChevronRight className="h-6 w-6" />
-        </button>
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleEdit}
+            className="mr-1 h-8 w-8 p-0"
+            title="Edit workout"
+          >
+            <Pencil className="h-4 w-4 text-blue-600" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleViewDetails}
+            className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </Card>
   );

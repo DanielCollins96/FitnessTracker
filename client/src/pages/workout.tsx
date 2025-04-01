@@ -9,8 +9,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -27,35 +38,78 @@ const workoutFormSchema = z.object({
     duration: z.number().min(1).optional(),
     notes: z.string().optional(),
   }),
-  exercises: z.array(z.object({
-    name: z.string().min(1, { message: "Exercise name is required" }),
-    sets: z.array(z.object({
-      weight: z.number().min(0),
-      reps: z.number().min(1),
-    })).min(1, { message: "At least one set is required" }),
-  })).min(1, { message: "At least one exercise is required" }),
+  exercises: z
+    .array(
+      z.object({
+        name: z.string().min(1, { message: "Exercise name is required" }),
+        sets: z
+          .array(
+            z.object({
+              weight: z.number().min(0),
+              reps: z.number().min(1),
+            }),
+          )
+          .min(1, { message: "At least one set is required" }),
+      }),
+    )
+    .min(1, { message: "At least one exercise is required" }),
 });
 
 type WorkoutFormValues = z.infer<typeof workoutFormSchema>;
 
-export default function Workout() {
+export default function Workout(props: { params?: { id?: string } }) {
+  const isEditMode = !!props.params?.id;
+  const workoutId = props.params?.id ? parseInt(props.params.id) : undefined;
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  
+
   // Fetch exercise types from API
-  const { data: exerciseTypes, isLoading: isLoadingExerciseTypes } = useQuery<{ id: number; name: string; description: string | null; notes: string | null; category: string | null; created: string }[]>({
-    queryKey: ['/api/exercise-types'],
+  const { data: exerciseTypes, isLoading: isLoadingExerciseTypes } = useQuery<
+    {
+      id: number;
+      name: string;
+      description: string | null;
+      notes: string | null;
+      category: string | null;
+      created: string;
+    }[]
+  >({
+    queryKey: ["/api/exercise-types"],
   });
   
-  // Extract exercise names for dropdown
-  const exerciseTypeNames = exerciseTypes?.map(type => type.name) || [];
+  // Define type for the workout with exercises response
+  type WorkoutWithExercisesResponse = {
+    workout: {
+      id: number;
+      name: string;
+      date: string;
+      duration: number;
+      notes: string | null;
+    };
+    exercises: {
+      id: number;
+      workoutId: number;
+      name: string;
+      sets: { weight: number; reps: number }[];
+    }[];
+  };
   
-  // Default exercise name
-  const defaultExerciseName = exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
+  // Fetch existing workout if in edit mode
+  const { data: existingWorkout, isLoading: isLoadingWorkout } = useQuery<WorkoutWithExercisesResponse>({
+    queryKey: [`/api/workout-with-exercises/${workoutId}`],
+    enabled: isEditMode && !!workoutId,
+  });
+  
+  // Create a state to track whether form has been initialized with existing data
+  const [formInitialized, setFormInitialized] = useState(false);
 
-  // State to track initial loading
-  const [isInitialized, setIsInitialized] = useState(false);
-  
+  // Extract exercise names for dropdown
+  const exerciseTypeNames = exerciseTypes?.map((type) => type.name) || [];
+
+  // Default exercise name
+  const defaultExerciseName =
+    exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
+
   // Define form with defaults
   const form = useForm<WorkoutFormValues>({
     resolver: zodResolver(workoutFormSchema),
@@ -69,60 +123,45 @@ export default function Workout() {
       exercises: [
         {
           name: defaultExerciseName,
-          sets: [{ weight: 0, reps: 0 }],
+          sets: [{ weight: 135, reps: 10 }],
         },
       ],
     },
   });
-  
-  // Initialize first exercise with last used values if available
-  useEffect(() => {
-    // Only run this once when exercise types are loaded
-    if (exerciseTypeNames.length > 0 && !isInitialized) {
-      const initializeWithLastUsed = async () => {
-        const defaultName = exerciseTypeNames[0];
-        try {
-          const response = await fetch(`/api/exercise-latest/${encodeURIComponent(defaultName)}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.weight > 0) {
-              // Update form with the last used values
-              form.setValue('exercises.0.name', defaultName);
-              form.setValue('exercises.0.sets.0.weight', data.weight);
-              form.setValue('exercises.0.sets.0.reps', data.reps);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching initial last used values:", error);
-        } finally {
-          setIsInitialized(true);
-        }
-      };
-      
-      initializeWithLastUsed();
-    }
-  }, [exerciseTypeNames, form, isInitialized]);
 
-  // Mutation to save the workout
+  // Mutation to save or update the workout
   const saveWorkout = useMutation({
-    mutationFn: (data: WorkoutFormValues) => 
-      apiRequest("POST", "/api/workout-with-exercises", data),
+    mutationFn: (data: WorkoutFormValues) => {
+      if (isEditMode && workoutId) {
+        // Update existing workout
+        return apiRequest("PUT", `/api/workout-with-exercises/${workoutId}`, data);
+      } else {
+        // Create new workout
+        return apiRequest("POST", "/api/workout-with-exercises", data);
+      }
+    },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Workout saved successfully!",
+        description: isEditMode ? "Workout updated successfully!" : "Workout saved successfully!",
         variant: "default",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
-      navigate("/");
+      queryClient.invalidateQueries({ queryKey: ["/api/recent-workouts"] });
+      // If editing, also invalidate the current workout query
+      if (isEditMode && workoutId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/workout-with-exercises/${workoutId}`] });
+      }
+      navigate("/history");
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to save workout. Please try again.",
+        description: isEditMode 
+          ? "Failed to update workout. Please try again." 
+          : "Failed to save workout. Please try again.",
         variant: "destructive",
       });
-      console.error("Error saving workout:", error);
+      console.error("Error saving/updating workout:", error);
     },
   });
 
@@ -132,35 +171,105 @@ export default function Workout() {
   };
 
   // Exercises field array
-  const { fields: exerciseFields, append: appendExercise, remove: removeExercise } = 
-    useFieldArray({
-      control: form.control,
-      name: "exercises",
-    });
+  const {
+    fields: exerciseFields,
+    append: appendExercise,
+    remove: removeExercise,
+  } = useFieldArray({
+    control: form.control,
+    name: "exercises",
+  });
 
   // Effect to update the default exercise when exercise types load
   useEffect(() => {
-    if (exerciseTypes && exerciseTypes.length > 0 && form.getValues('exercises').length > 0) {
-      const currentName = form.getValues('exercises')[0].name;
+    if (
+      exerciseTypes &&
+      exerciseTypes.length > 0 &&
+      form.getValues("exercises").length > 0 &&
+      !isEditMode
+    ) {
+      const currentName = form.getValues("exercises")[0].name;
       if (!currentName && exerciseTypes.length > 0) {
-        form.setValue('exercises.0.name', exerciseTypes[0].name);
+        form.setValue("exercises.0.name", exerciseTypes[0].name);
       }
     }
-  }, [exerciseTypes, form]);
+  }, [exerciseTypes, form, isEditMode]);
+  
+  // Effect to load existing workout data when in edit mode
+  useEffect(() => {
+    if (isEditMode && existingWorkout && !formInitialized) {
+      try {
+        const workout = existingWorkout as WorkoutWithExercisesResponse;
+        
+        // Clear any existing exercises
+        const currentExercises = form.getValues("exercises");
+        if (currentExercises && currentExercises.length > 0) {
+          for (let i = currentExercises.length - 1; i >= 0; i--) {
+            removeExercise(i);
+          }
+        }
+        
+        // Set workout basic info
+        form.setValue("workout.name", workout.workout.name);
+        form.setValue("workout.notes", workout.workout.notes || "");
+        
+        // Parse the date and set it
+        if (workout.workout.date) {
+          const workoutDate = new Date(workout.workout.date);
+          form.setValue("workout.date", workoutDate);
+        }
+        
+        // Set duration if available
+        if (workout.workout.duration) {
+          form.setValue("workout.duration", workout.workout.duration);
+        }
+        
+        // Add exercises
+        if (workout.exercises && workout.exercises.length > 0) {
+          workout.exercises.forEach((exercise) => {
+            appendExercise({
+              name: exercise.name,
+              sets: exercise.sets || [{ weight: 0, reps: 0 }]
+            });
+          });
+        }
+        
+        setFormInitialized(true);
+        toast({
+          title: "Workout Loaded",
+          description: "The workout data has been loaded for editing.",
+          variant: "default",
+        });
+      } catch (error) {
+        console.error("Error initializing form with existing workout:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load workout data for editing.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [existingWorkout, form, formInitialized, isEditMode, appendExercise, removeExercise, toast]);
 
   // Loading state
-  if (isLoadingExerciseTypes) {
+  if (isLoadingExerciseTypes || (isEditMode && isLoadingWorkout)) {
     return (
       <div className="px-4 py-6">
         <div className="mb-6">
-          <div className="flex items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Add Workout</h2>
-          </div>
           <Card>
             <CardContent className="p-4">
+              <div className="flex items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  {isEditMode ? "Edit Workout" : "Add Workout"}
+                </h2>
+              </div>
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500">Loading exercise library...</p>
+                <p className="text-gray-500">
+                  {isEditMode && isLoadingWorkout 
+                    ? "Loading workout data..." 
+                    : "Loading exercise library..."}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -172,13 +281,18 @@ export default function Workout() {
   return (
     <div className="px-4 py-6">
       <div className="mb-6">
-        <div className="flex items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Add Workout</h2>
-        </div>
         <Card>
           <CardContent className="p-4">
+            <div className="flex items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {isEditMode ? "Edit Workout" : "Add Workout"}
+              </h2>
+            </div>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 {/* Date input */}
                 <FormField
                   control={form.control}
@@ -193,7 +307,7 @@ export default function Workout() {
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value ? (
@@ -227,9 +341,9 @@ export default function Workout() {
                     <FormItem>
                       <FormLabel>Workout Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="e.g. Upper Body, Leg Day" 
-                          {...field} 
+                        <Input
+                          placeholder="e.g. Upper Body, Leg Day"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -254,35 +368,15 @@ export default function Workout() {
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={async () => {
-                      const defaultName = exerciseTypeNames.length > 0 ? exerciseTypeNames[0] : "";
-                      
-                      // Try to fetch last used values for the default exercise
-                      if (defaultName) {
-                        try {
-                          const response = await fetch(`/api/exercise-latest/${encodeURIComponent(defaultName)}`);
-                          if (response.ok) {
-                            const data = await response.json();
-                            if (data.weight > 0) {
-                              // If we have last used values, use them
-                              appendExercise({ 
-                                name: defaultName, 
-                                sets: [{ weight: data.weight, reps: data.reps }] 
-                              });
-                              return;
-                            }
-                          }
-                        } catch (error) {
-                          console.error("Error fetching last used values:", error);
-                        }
-                      }
-                      
-                      // Fallback to default values
-                      appendExercise({ 
-                        name: defaultName, 
-                        sets: [{ weight: 0, reps: 0 }] 
-                      });
-                    }}
+                    onClick={() =>
+                      appendExercise({
+                        name:
+                          exerciseTypeNames.length > 0
+                            ? exerciseTypeNames[0]
+                            : "",
+                        sets: [{ weight: 0, reps: 0 }],
+                      })
+                    }
                     className="mt-2 text-primary font-medium flex items-center"
                   >
                     <Plus className="h-5 w-5 mr-1" />
@@ -298,10 +392,10 @@ export default function Workout() {
                     <FormItem>
                       <FormLabel>Notes (optional)</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="How did the workout feel?" 
-                          className="resize-none" 
-                          {...field} 
+                        <Textarea
+                          placeholder="How did the workout feel?"
+                          className="resize-none"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -311,12 +405,14 @@ export default function Workout() {
 
                 {/* Submit button */}
                 <div className="flex space-x-2">
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="flex-1"
                     disabled={saveWorkout.isPending}
                   >
-                    {saveWorkout.isPending ? "Saving..." : "Save Workout"}
+                    {saveWorkout.isPending 
+                      ? "Saving..." 
+                      : isEditMode ? "Update Workout" : "Save Workout"}
                   </Button>
                 </div>
               </form>

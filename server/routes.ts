@@ -264,6 +264,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch workout with exercises" });
     }
   });
+  
+  router.put("/workout-with-exercises/:workoutId", async (req, res) => {
+    try {
+      const workoutId = parseInt(req.params.workoutId);
+      
+      // Parse the date string to a Date object
+      if (req.body.workout.date && typeof req.body.workout.date === 'string') {
+        req.body.workout.date = new Date(req.body.workout.date);
+      }
+      
+      const validatedData = workoutWithExercisesSchema.parse(req.body);
+      
+      // Check if workout exists
+      const existingWorkout = await storage.getWorkout(workoutId);
+      if (!existingWorkout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      // Update the workout
+      const updatedWorkout = await storage.updateWorkout(workoutId, validatedData.workout);
+      
+      // Delete all existing exercises for this workout
+      const existingExercises = await storage.getExercises(workoutId);
+      for (const exercise of existingExercises) {
+        await storage.deleteExercise(exercise.id);
+      }
+      
+      // Create new exercises for the workout
+      const exercises = [];
+      for (const exerciseData of validatedData.exercises) {
+        const exercise = await storage.createExercise({
+          ...exerciseData,
+          workoutId
+        });
+        exercises.push(exercise);
+      }
+      
+      res.json({
+        workout: updatedWorkout,
+        exercises
+      });
+    } catch (error) {
+      console.error("Error updating workout with exercises:", error);
+      res.status(400).json({ message: "Invalid workout or exercise data" });
+    }
+  });
 
   router.get("/recent-workouts", async (req, res) => {
     try {
