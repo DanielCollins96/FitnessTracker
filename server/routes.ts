@@ -289,8 +289,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         existingName: existingWorkout.name
       });
       
+      // Ensure the name is preserved in the update
+      const workoutUpdateData = {
+        ...validatedData.workout,
+        name: validatedData.workout.name || existingWorkout.name || "Unnamed Workout"
+      };
+      
+      console.log("Final workout update data:", workoutUpdateData);
+      
       // Update the workout
-      const updatedWorkout = await storage.updateWorkout(workoutId, validatedData.workout);
+      const updatedWorkout = await storage.updateWorkout(workoutId, workoutUpdateData);
       
       // Delete all existing exercises for this workout
       const existingExercises = await storage.getExercises(workoutId);

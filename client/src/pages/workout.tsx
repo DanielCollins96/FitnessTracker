@@ -167,8 +167,17 @@ export default function Workout(props: { params?: { id?: string } }) {
 
   // Form submission handler
   const onSubmit = (data: WorkoutFormValues) => {
-    console.log("Submitting workout form:", data);
-    saveWorkout.mutate(data);
+    // Make sure we include the name field explicitly
+    const formattedData = {
+      ...data,
+      workout: {
+        ...data.workout,
+        name: data.workout.name || "Unnamed Workout"
+      }
+    };
+    
+    console.log("Submitting workout form:", formattedData);
+    saveWorkout.mutate(formattedData);
   };
 
   // Exercises field array

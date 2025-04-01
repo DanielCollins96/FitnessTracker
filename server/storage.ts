@@ -136,7 +136,13 @@ export class MemStorage implements IStorage {
       workoutObj: workout
     });
     
-    const updatedWorkout = { ...existingWorkout, ...workout };
+    // Ensure name is not lost during the update
+    const workoutWithName = {
+      ...workout,
+      name: workout.name || existingWorkout.name || "Unnamed Workout"
+    };
+    
+    const updatedWorkout = { ...existingWorkout, ...workoutWithName };
     console.log("Storage: Updated workout result:", updatedWorkout);
     
     this.workouts.set(id, updatedWorkout);
