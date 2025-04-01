@@ -292,7 +292,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure the name is preserved in the update
       const workoutUpdateData = {
         ...validatedData.workout,
-        name: validatedData.workout.name || existingWorkout.name || "Unnamed Workout"
+        name:
+          validatedData.workout.name ||
+          existingWorkout.name ||
+          "Unnamed Workout",
       };
       
       console.log("Final workout update data:", workoutUpdateData);
