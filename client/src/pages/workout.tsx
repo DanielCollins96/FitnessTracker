@@ -167,6 +167,7 @@ export default function Workout(props: { params?: { id?: string } }) {
 
   // Form submission handler
   const onSubmit = (data: WorkoutFormValues) => {
+    console.log("Submitting workout form:", data);
     saveWorkout.mutate(data);
   };
 

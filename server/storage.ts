@@ -129,7 +129,16 @@ export class MemStorage implements IStorage {
     const existingWorkout = this.workouts.get(id);
     if (!existingWorkout) return undefined;
     
+    console.log("Storage: Updating workout:", {
+      id,
+      existingName: existingWorkout.name,
+      newName: workout.name,
+      workoutObj: workout
+    });
+    
     const updatedWorkout = { ...existingWorkout, ...workout };
+    console.log("Storage: Updated workout result:", updatedWorkout);
+    
     this.workouts.set(id, updatedWorkout);
     return updatedWorkout;
   }

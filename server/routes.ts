@@ -282,6 +282,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Workout not found" });
       }
       
+      // Log the incoming workout data for debugging
+      console.log("Updating workout with data:", {
+        workoutId,
+        incomingName: validatedData.workout.name,
+        existingName: existingWorkout.name
+      });
+      
       // Update the workout
       const updatedWorkout = await storage.updateWorkout(workoutId, validatedData.workout);
       
