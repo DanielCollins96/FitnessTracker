@@ -355,20 +355,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress tracking routes
-  router.get("/exercise-history/:exerciseName", async (req, res) => {
+  router.get("/exercise-history/:exerciseName?", async (req, res) => {
     try {
-      const exerciseName = req.params.exerciseName;
+      const exerciseName = req.params.exerciseName || req.query.exerciseName as string || "Bench Press";
+      
+      console.log("Fetching exercise history for:", exerciseName);
+      
       const history = await storage.getExerciseHistory(exerciseName);
-      res.json(history);
+      
+      // Format the dates for frontend display
+      const formattedHistory = history.map(set => ({
+        ...set,
+        formattedDate: format(new Date(set.date), "MMM d")
+      }));
+      
+      res.json(formattedHistory);
     } catch (error) {
+      console.error("Error fetching exercise history:", error);
       res.status(500).json({ message: "Failed to fetch exercise history" });
     }
   });
 
-  router.get("/exercise-sets/:exerciseName", async (req, res) => {
+  router.get("/exercise-sets/:exerciseName?", async (req, res) => {
     try {
-      const exerciseName = req.params.exerciseName;
+      const exerciseName = req.params.exerciseName || req.query.exerciseName as string || "Bench Press";
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+      
+      console.log("Fetching exercise sets for:", exerciseName, "limit:", limit);
+      
       const sets = await storage.getExerciseSets(exerciseName, limit);
       
       // Format the dates for frontend display
@@ -379,6 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(formattedSets);
     } catch (error) {
+      console.error("Error fetching exercise sets:", error);
       res.status(500).json({ message: "Failed to fetch exercise sets" });
     }
   });

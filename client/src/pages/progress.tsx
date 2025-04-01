@@ -50,14 +50,28 @@ export default function Progress() {
   const { toast } = useToast();
   
   // Fetch exercise history
-  const { data: exerciseHistory, isLoading: isLoadingHistory } = useQuery<any[]>({
+  const { data: exerciseHistory, isLoading: isLoadingHistory } = useQuery<ExerciseSet[]>({
     queryKey: ['/api/exercise-history', selectedExercise],
+    queryFn: async () => {
+      const response = await fetch(`/api/exercise-history?exerciseName=${encodeURIComponent(selectedExercise)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercise history');
+      }
+      return response.json();
+    },
     enabled: !!selectedExercise,
   });
   
   // Fetch recent sets
   const { data: recentSets, isLoading: isLoadingSets } = useQuery<ExerciseSet[]>({
     queryKey: ['/api/exercise-sets', selectedExercise],
+    queryFn: async () => {
+      const response = await fetch(`/api/exercise-sets?exerciseName=${encodeURIComponent(selectedExercise)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercise sets');
+      }
+      return response.json();
+    },
     enabled: !!selectedExercise,
   });
   
