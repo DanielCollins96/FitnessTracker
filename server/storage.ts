@@ -1,5 +1,3 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
 import {
   InsertExercise,
   Exercise,
@@ -11,9 +9,6 @@ import {
   InsertExerciseType,
   ExerciseType,
 } from "@shared/schema";
-
-const sqlite = new Database("data.db");
-const db = drizzle(sqlite);
 
 export interface IStorage {
   // Workout operations
@@ -78,277 +73,329 @@ export interface IStorage {
   ): Promise<{ weight: number; reps: number } | null>;
 }
 
-export class SQLiteStorage implements IStorage {
+export class MemStorage implements IStorage {
+  private workouts: Map<number, Workout>;
+  private exercises: Map<number, Exercise>;
+  private goals: Map<number, Goal>;
+  private exerciseTypes: Map<number, ExerciseType>;
+  private workoutIdCounter: number;
+  private exerciseIdCounter: number;
+  private goalIdCounter: number;
+  private exerciseTypeIdCounter: number;
+
+  constructor() {
+    this.workouts = new Map();
+    this.exercises = new Map();
+    this.goals = new Map();
+    this.exerciseTypes = new Map();
+    this.workoutIdCounter = 1;
+    this.exerciseIdCounter = 1;
+    this.goalIdCounter = 1;
+    this.exerciseTypeIdCounter = 1;
+
+    // Add some sample data
+    this.createExerciseType({
+      name: "Bench Press",
+      description: "A classic chest exercise",
+      notes: "Keep shoulders back and down",
+      category: "Chest"
+    });
+
+    this.createExerciseType({
+      name: "Squat",
+      description: "The king of leg exercises",
+      notes: "Drive through heels",
+      category: "Legs"
+    });
+
+    this.createExerciseType({
+      name: "Deadlift",
+      description: "A full-body pull exercise",
+      notes: "Maintain neutral spine",
+      category: "Back"
+    });
+
+    this.createGoal({
+      name: "Weekly Workouts",
+      targetReps: 5,
+      currentProgress: 2,
+      isCompleted: false
+    });
+  }
+
   // Workout methods
   async getWorkouts(): Promise<Workout[]> {
-    return db.query.workouts.findMany({
-      orderBy: (workouts, { desc }) => [desc(workouts.date)],
-    });
+    return [...this.workouts.values()].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
   }
 
   async getWorkout(id: number): Promise<Workout | undefined> {
-    return db.query.workouts.findFirst({
-      where: (workouts, { eq }) => eq(workouts.id, id),
-    });
+    return this.workouts.get(id);
   }
 
   async createWorkout(workout: InsertWorkout): Promise<Workout> {
-    const result = await db.insert(workouts).values(workout).returning();
-    return result[0];
+    const id = this.workoutIdCounter++;
+    const newWorkout: Workout = { ...workout, id };
+    this.workouts.set(id, newWorkout);
+    return newWorkout;
   }
 
-  async updateWorkout(
-    id: number,
-    workout: Partial<InsertWorkout>,
-  ): Promise<Workout | undefined> {
-    const result = await db
-      .update(workouts)
-      .set(workout)
-      .where(eq(workouts.id, id))
-      .returning();
-    return result[0];
+  async updateWorkout(id: number, workout: Partial<InsertWorkout>): Promise<Workout | undefined> {
+    const existingWorkout = this.workouts.get(id);
+    if (!existingWorkout) return undefined;
+    
+    console.log("Storage: Updating workout:", {
+      id,
+      existingName: existingWorkout.name,
+      newName: workout.name,
+      workoutObj: workout
+    });
+    
+    // Ensure name is not lost during the update
+    const workoutWithName = {
+      ...workout,
+      name: workout.name || existingWorkout.name || "Unnamed Workout"
+    };
+    
+    const updatedWorkout = { ...existingWorkout, ...workoutWithName };
+    console.log("Storage: Updated workout result:", updatedWorkout);
+    
+    this.workouts.set(id, updatedWorkout);
+    return updatedWorkout;
   }
 
   async deleteWorkout(id: number): Promise<boolean> {
-    const result = await db
-      .delete(workouts)
-      .where(eq(workouts.id, id))
-      .returning();
-    return result.length > 0;
+    // Also delete associated exercises
+    const exercisesToDelete = [...this.exercises.values()].filter(e => e.workoutId === id);
+    exercisesToDelete.forEach(e => this.exercises.delete(e.id));
+    
+    return this.workouts.delete(id);
   }
 
   // Exercise methods
   async getExercises(workoutId: number): Promise<Exercise[]> {
-    return db.query.exercises.findMany({
-      where: (exercises, { eq }) => eq(exercises.workoutId, workoutId),
-    });
+    return [...this.exercises.values()].filter(e => e.workoutId === workoutId);
   }
 
   async getExercise(id: number): Promise<Exercise | undefined> {
-    return db.query.exercises.findFirst({
-      where: (exercises, { eq }) => eq(exercises.id, id),
-    });
+    return this.exercises.get(id);
   }
 
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
-    const result = await db.insert(exercises).values(exercise).returning();
-    return result[0];
+    const id = this.exerciseIdCounter++;
+    const newExercise: Exercise = { ...exercise, id };
+    this.exercises.set(id, newExercise);
+    return newExercise;
   }
 
-  async updateExercise(
-    id: number,
-    exercise: Partial<InsertExercise>,
-  ): Promise<Exercise | undefined> {
-    const result = await db
-      .update(exercises)
-      .set(exercise)
-      .where(eq(exercises.id, id))
-      .returning();
-    return result[0];
+  async updateExercise(id: number, exercise: Partial<InsertExercise>): Promise<Exercise | undefined> {
+    const existingExercise = this.exercises.get(id);
+    if (!existingExercise) return undefined;
+    
+    const updatedExercise = { ...existingExercise, ...exercise };
+    this.exercises.set(id, updatedExercise);
+    return updatedExercise;
   }
 
   async deleteExercise(id: number): Promise<boolean> {
-    const result = await db
-      .delete(exercises)
-      .where(eq(exercises.id, id))
-      .returning();
-    return result.length > 0;
+    return this.exercises.delete(id);
   }
-
+  
   // Exercise Type methods
   async getExerciseTypes(): Promise<ExerciseType[]> {
-    return db.query.exerciseTypes.findMany();
+    return [...this.exerciseTypes.values()];
   }
 
   async getExerciseType(id: number): Promise<ExerciseType | undefined> {
-    return db.query.exerciseTypes.findFirst({
-      where: (exerciseTypes, { eq }) => eq(exerciseTypes.id, id),
-    });
+    return this.exerciseTypes.get(id);
   }
 
   async getExerciseTypeByName(name: string): Promise<ExerciseType | undefined> {
-    return db.query.exerciseTypes.findFirst({
-      where: (exerciseTypes, { eq }) => eq(exerciseTypes.name, name),
-    });
+    return [...this.exerciseTypes.values()].find(et => et.name === name);
   }
 
   async createExerciseType(exerciseType: InsertExerciseType): Promise<ExerciseType> {
-    const result = await db.insert(exerciseTypes).values(exerciseType).returning();
-    return result[0];
+    const id = this.exerciseTypeIdCounter++;
+    const created = new Date();
+    const newExerciseType: ExerciseType = { 
+      ...exerciseType, 
+      id, 
+      created, 
+      notes: exerciseType.notes || null,
+      description: exerciseType.description || null,
+      category: exerciseType.category || null
+    };
+    this.exerciseTypes.set(id, newExerciseType);
+    return newExerciseType;
   }
 
-  async updateExerciseType(
-    id: number,
-    exerciseType: Partial<InsertExerciseType>,
-  ): Promise<ExerciseType | undefined> {
-    const result = await db
-      .update(exerciseTypes)
-      .set(exerciseType)
-      .where(eq(exerciseTypes.id, id))
-      .returning();
-    return result[0];
+  async updateExerciseType(id: number, exerciseType: Partial<InsertExerciseType>): Promise<ExerciseType | undefined> {
+    const existingExerciseType = this.exerciseTypes.get(id);
+    if (!existingExerciseType) return undefined;
+    
+    const updatedExerciseType = { ...existingExerciseType, ...exerciseType };
+    this.exerciseTypes.set(id, updatedExerciseType);
+    return updatedExerciseType;
   }
 
   async deleteExerciseType(id: number): Promise<boolean> {
-    const result = await db
-      .delete(exerciseTypes)
-      .where(eq(exerciseTypes.id, id))
-      .returning();
-    return result.length > 0;
+    return this.exerciseTypes.delete(id);
   }
 
   // Goal methods
   async getGoals(): Promise<Goal[]> {
-    return db.query.goals.findMany();
+    return [...this.goals.values()];
   }
 
   async getGoal(id: number): Promise<Goal | undefined> {
-    return db.query.goals.findFirst({
-      where: (goals, { eq }) => eq(goals.id, id),
-    });
+    return this.goals.get(id);
   }
 
   async createGoal(goal: InsertGoal): Promise<Goal> {
-    const result = await db.insert(goals).values(goal).returning();
-    return result[0];
+    const id = this.goalIdCounter++;
+    const newGoal: Goal = { 
+      ...goal, 
+      id,
+      exerciseName: goal.exerciseName || null,
+      targetWeight: goal.targetWeight || null,
+      targetReps: goal.targetReps || null,
+      targetDate: goal.targetDate || null,
+      isCompleted: goal.isCompleted || false,
+      currentProgress: goal.currentProgress || null
+    };
+    this.goals.set(id, newGoal);
+    return newGoal;
   }
 
-  async updateGoal(
-    id: number,
-    goal: Partial<InsertGoal>,
-  ): Promise<Goal | undefined> {
-    const result = await db
-      .update(goals)
-      .set(goal)
-      .where(eq(goals.id, id))
-      .returning();
-    return result[0];
+  async updateGoal(id: number, goal: Partial<InsertGoal>): Promise<Goal | undefined> {
+    const existingGoal = this.goals.get(id);
+    if (!existingGoal) return undefined;
+    
+    const updatedGoal = { ...existingGoal, ...goal };
+    this.goals.set(id, updatedGoal);
+    return updatedGoal;
   }
 
   async deleteGoal(id: number): Promise<boolean> {
-    const result = await db
-      .delete(goals)
-      .where(eq(goals.id, id))
-      .returning();
-    return result.length > 0;
+    return this.goals.delete(id);
   }
 
   // Combined operations
-  async createWorkoutWithExercises(
-    data: WorkoutWithExercises,
-  ): Promise<{ workout: Workout; exercises: Exercise[] }> {
+  async createWorkoutWithExercises(data: WorkoutWithExercises): Promise<{ workout: Workout, exercises: Exercise[] }> {
     const workout = await this.createWorkout({
       name: data.workout.name,
       date: data.workout.date,
-      duration: data.workout.duration,
-      notes: data.workout.notes,
+      duration: data.workout.duration || null,
+      notes: data.workout.notes || null
     });
-
+    
     const exercises: Exercise[] = [];
     for (const exerciseData of data.exercises) {
       const exercise = await this.createExercise({
         workoutId: workout.id,
         name: exerciseData.name,
-        sets: exerciseData.sets,
+        sets: exerciseData.sets
       });
       exercises.push(exercise);
     }
-
+    
     return { workout, exercises };
   }
 
-  async getWorkoutWithExercises(
-    workoutId: number,
-  ): Promise<{ workout: Workout; exercises: Exercise[] } | undefined> {
+  async getWorkoutWithExercises(workoutId: number): Promise<{ workout: Workout, exercises: Exercise[] } | undefined> {
     const workout = await this.getWorkout(workoutId);
     if (!workout) return undefined;
-
+    
     const exercises = await this.getExercises(workoutId);
     return { workout, exercises };
   }
 
-  async getRecentWorkouts(
-    limit: number,
-  ): Promise<{ workout: Workout; exercises: Exercise[] }[]> {
+  async getRecentWorkouts(limit: number): Promise<{ workout: Workout, exercises: Exercise[] }[]> {
     const workouts = await this.getWorkouts();
     const limitedWorkouts = workouts.slice(0, limit);
-
+    
     const result = [];
     for (const workout of limitedWorkouts) {
       const exercises = await this.getExercises(workout.id);
       result.push({ workout, exercises });
     }
-
+    
     return result;
   }
 
   // Progress tracking operations
-  async getExerciseHistory(
-    exerciseName: string,
-  ): Promise<{ date: Date; weight: number; reps: number }[]> {
-    const allExercises = await db.query.exercises.findMany({
-      where: (exercises, { eq }) => eq(exercises.name, exerciseName),
-      with: {
-        workout: true,
-      },
-    });
-
-    return allExercises
-      .flatMap((exercise) => {
-        if (!exercise.workout) return [];
-
-        const heaviestSet = [...exercise.sets].sort(
-          (a, b) => b.weight - a.weight,
-        )[0];
-        if (!heaviestSet) return [];
-
-        return {
-          date: exercise.workout.date,
-          weight: heaviestSet.weight,
-          reps: heaviestSet.reps,
-        };
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  async getExerciseHistory(exerciseName: string): Promise<{ date: Date, weight: number, reps: number }[]> {
+    const allExercises = [...this.exercises.values()].filter(e => e.name === exerciseName);
+    const workouts = new Map([...this.workouts.entries()]);
+    
+    return allExercises.flatMap(exercise => {
+      const workout = workouts.get(exercise.workoutId);
+      if (!workout) return [];
+      
+      // Return the heaviest set for each exercise
+      const heaviestSet = [...exercise.sets].sort((a, b) => b.weight - a.weight)[0];
+      if (!heaviestSet) return [];
+      
+      return {
+        date: workout.date,
+        weight: heaviestSet.weight,
+        reps: heaviestSet.reps
+      };
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
-  async getExerciseSets(
-    exerciseName: string,
-    limit: number,
-  ): Promise<{ date: Date; weight: number; reps: number }[]> {
+  async getExerciseSets(exerciseName: string, limit: number): Promise<{ date: Date, weight: number, reps: number }[]> {
     const history = await this.getExerciseHistory(exerciseName);
     return history.slice(-limit);
   }
-
-  async getLatestExerciseSet(
-    exerciseName: string,
-  ): Promise<{ weight: number; reps: number } | null> {
-    const allExercises = await db.query.exercises.findMany({
-      where: (exercises, { eq }) => eq(exercises.name, exerciseName),
-      with: {
-        workout: true,
-      },
-      orderBy: (exercises, { desc }) => [desc(exercises.workout.date)],
-      limit: 1,
-    });
-
+  
+  async getLatestExerciseSet(exerciseName: string): Promise<{ weight: number, reps: number } | null> {
+    // Get all exercises with the given name
+    const allExercises = [...this.exercises.values()].filter(e => e.name === exerciseName);
+    
     if (allExercises.length === 0) {
       return null;
     }
-
-    const latestExercise = allExercises[0];
-    const heaviestSet = [...latestExercise.sets].sort(
-      (a, b) => b.weight - a.weight,
-    )[0];
-
+    
+    // Get the workouts to sort by date
+    const workoutsMap = new Map([...this.workouts.entries()]);
+    
+    // Sort exercises by workout date, newest first
+    const sortedExercises = allExercises
+      .filter(exercise => {
+        const workout = workoutsMap.get(exercise.workoutId);
+        return workout !== undefined;
+      })
+      .sort((a, b) => {
+        const workoutA = workoutsMap.get(a.workoutId);
+        const workoutB = workoutsMap.get(b.workoutId);
+        
+        if (!workoutA || !workoutB) return 0;
+        
+        return new Date(workoutB.date).getTime() - new Date(workoutA.date).getTime();
+      });
+    
+    // No exercises found with corresponding workout
+    if (sortedExercises.length === 0) {
+      return null;
+    }
+    
+    // Get the most recent exercise
+    const latestExercise = sortedExercises[0];
+    
+    // Find the heaviest set from this exercise
+    const heaviestSet = [...latestExercise.sets].sort((a, b) => b.weight - a.weight)[0];
+    
     if (!heaviestSet) {
       return null;
     }
-
+    
     return {
       weight: heaviestSet.weight,
-      reps: heaviestSet.reps,
+      reps: heaviestSet.reps
     };
   }
 }
 
-export const storage = new SQLiteStorage();
+export const storage = new MemStorage();
