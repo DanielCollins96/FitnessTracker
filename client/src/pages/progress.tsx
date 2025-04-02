@@ -43,18 +43,6 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
-// Common exercise types for the selector
-const { data: EXERCISE_TYPES, isLoading: isLoadingExercises } = useQuery<string[]>({
-  queryKey: ["/api/exercise-types"],
-  queryFn: async () => {
-    const response = await fetch(`/api/exercise-types`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch exercise types");
-    }
-    return response.json();
-  },
-});
-
 interface ExerciseSet {
   date: Date;
   formattedDate: string;
@@ -92,7 +80,20 @@ export default function Progress() {
     },
     enabled: !!selectedExercise,
   });
-
+  // Common exercise types for the selector
+  const { data: EXERCISE_TYPES, isLoading: isLoadingExercises } = useQuery<
+    string[]
+  >({
+    queryKey: ["/api/exercise-types"],
+    queryFn: async () => {
+      const response = await fetch(`/api/exercise-types`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch exercise types");
+      }
+      return response.json();
+    },
+  });
+  console.log(EXERCISE_TYPES);
   // Fetch recent sets
   const { data: recentSets, isLoading: isLoadingSets } = useQuery<
     ExerciseSet[]
@@ -202,11 +203,13 @@ export default function Progress() {
                 <SelectValue placeholder="Select exercise" />
               </SelectTrigger>
               <SelectContent>
-                {EXERCISE_TYPES.map((exercise) => (
-                  <SelectItem key={exercise} value={exercise}>
-                    {exercise}
-                  </SelectItem>
-                ))}
+                {/* {JSON.parse(JSON.stringify(EXERCISE_TYPES))} */}
+                {EXERCISE_TYPES &&
+                  EXERCISE_TYPES.map((exercise) => (
+                    <SelectItem key={exercise.id} value={exercise.name}>
+                      {exercise.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

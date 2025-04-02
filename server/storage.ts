@@ -240,6 +240,25 @@ export class MemStorage implements IStorage {
     const existingExerciseType = this.exerciseTypes.get(id);
     if (!existingExerciseType) return undefined;
     
+    // If the name is changing, update all exercises with the old name
+    if (exerciseType.name && exerciseType.name !== existingExerciseType.name) {
+      // Update exercises that use this exercise type
+      for (const [exerciseId, exercise] of this.exercises.entries()) {
+        if (exercise.name === existingExerciseType.name) {
+          const updatedExercise = { ...exercise, name: exerciseType.name };
+          this.exercises.set(exerciseId, updatedExercise);
+        }
+      }
+      
+      // Update goals that might reference this exercise name
+      for (const [goalId, goal] of this.goals.entries()) {
+        if (goal.exerciseName === existingExerciseType.name) {
+          const updatedGoal = { ...goal, exerciseName: exerciseType.name };
+          this.goals.set(goalId, updatedGoal);
+        }
+      }
+    }
+    
     const updatedExerciseType = { ...existingExerciseType, ...exerciseType };
     this.exerciseTypes.set(id, updatedExerciseType);
     return updatedExerciseType;
@@ -524,11 +543,39 @@ export class PostgresStorage implements IStorage {
     id: number,
     exerciseType: Partial<InsertExerciseType>,
   ): Promise<ExerciseType | undefined> {
+    // First get the original exercise type to find its name
+    const originalExerciseType = await this.getExerciseType(id);
+    if (!originalExerciseType) {
+      return undefined;
+    }
+
+    // If the name is changing, update all exercises with the old name
+    if (exerciseType.name && exerciseType.name !== originalExerciseType.name) {
+      console.log(`Updating exercises with name "${originalExerciseType.name}" to "${exerciseType.name}"`);
+      try {
+        // Update all exercises that use this exercise type name
+        await db
+          .update(exercises)
+          .set({ name: exerciseType.name })
+          .where(eq(exercises.name, originalExerciseType.name));
+          
+        // Also update any goals that might reference this exercise
+        await db
+          .update(goals)
+          .set({ exerciseName: exerciseType.name })
+          .where(eq(goals.exerciseName, originalExerciseType.name));
+      } catch (error) {
+        console.error("Error updating exercises with new exercise type name:", error);
+      }
+    }
+
+    // Now update the exercise type
     const result = await db
       .update(exerciseTypes)
       .set(exerciseType)
       .where(eq(exerciseTypes.id, id))
       .returning();
+      
     return result[0];
   }
 
