@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -8,25 +16,44 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 // Common exercise types for the selector
-const EXERCISE_TYPES = [
-  "Bench Press",
-  "Squat",
-  "Deadlift",
-  "Shoulder Press",
-  "Pull-ups",
-  "Leg Press",
-];
+const { data: EXERCISE_TYPES, isLoading: isLoadingExercises } = useQuery<string[]>({
+  queryKey: ["/api/exercise-types"],
+  queryFn: async () => {
+    const response = await fetch(`/api/exercise-types`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch exercise types");
+    }
+    return response.json();
+  },
+});
 
 interface ExerciseSet {
   date: Date;
@@ -48,33 +75,41 @@ export default function Progress() {
   const [selectedExercise, setSelectedExercise] = useState("Bench Press");
   const [timeRange, setTimeRange] = useState("3M");
   const { toast } = useToast();
-  
+
   // Fetch exercise history
-  const { data: exerciseHistory, isLoading: isLoadingHistory } = useQuery<ExerciseSet[]>({
-    queryKey: ['/api/exercise-history', selectedExercise],
+  const { data: exerciseHistory, isLoading: isLoadingHistory } = useQuery<
+    ExerciseSet[]
+  >({
+    queryKey: ["/api/exercise-history", selectedExercise],
     queryFn: async () => {
-      const response = await fetch(`/api/exercise-history?exerciseName=${encodeURIComponent(selectedExercise)}`);
+      const response = await fetch(
+        `/api/exercise-history?exerciseName=${encodeURIComponent(selectedExercise)}`,
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch exercise history');
+        throw new Error("Failed to fetch exercise history");
       }
       return response.json();
     },
     enabled: !!selectedExercise,
   });
-  
+
   // Fetch recent sets
-  const { data: recentSets, isLoading: isLoadingSets } = useQuery<ExerciseSet[]>({
-    queryKey: ['/api/exercise-sets', selectedExercise],
+  const { data: recentSets, isLoading: isLoadingSets } = useQuery<
+    ExerciseSet[]
+  >({
+    queryKey: ["/api/exercise-sets", selectedExercise],
     queryFn: async () => {
-      const response = await fetch(`/api/exercise-sets?exerciseName=${encodeURIComponent(selectedExercise)}`);
+      const response = await fetch(
+        `/api/exercise-sets?exerciseName=${encodeURIComponent(selectedExercise)}`,
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch exercise sets');
+        throw new Error("Failed to fetch exercise sets");
       }
       return response.json();
     },
     enabled: !!selectedExercise,
   });
-  
+
   // Goal form
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
@@ -85,13 +120,13 @@ export default function Progress() {
       targetDate: new Date(new Date().setMonth(new Date().getMonth() + 3)), // 3 months from now
     },
   });
-  
+
   // Update form when selected exercise changes
   useState(() => {
     if (selectedExercise) {
       form.setValue("name", `Increase ${selectedExercise}`);
       form.setValue("exerciseName", selectedExercise);
-      
+
       // Set target weight to current weight + 20%
       if (recentSets && recentSets.length > 0) {
         const currentWeight = recentSets[recentSets.length - 1].weight;
@@ -99,14 +134,16 @@ export default function Progress() {
       }
     }
   });
-  
+
   // Goal mutation
   const createGoal = useMutation({
-    mutationFn: (data: GoalFormValues) => 
+    mutationFn: (data: GoalFormValues) =>
       apiRequest("POST", "/api/goals", {
         ...data,
-        currentProgress: recentSets && recentSets.length > 0 ? 
-          recentSets[recentSets.length - 1].weight : 0
+        currentProgress:
+          recentSets && recentSets.length > 0
+            ? recentSets[recentSets.length - 1].weight
+            : 0,
       }),
     onSuccess: () => {
       toast({
@@ -114,7 +151,7 @@ export default function Progress() {
         description: "Goal set successfully!",
         variant: "default",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
       form.reset();
     },
     onError: (error) => {
@@ -126,7 +163,7 @@ export default function Progress() {
       console.error("Error setting goal:", error);
     },
   });
-  
+
   // Calculate progress statistics
   const progressStats = {
     starting: 0,
@@ -134,14 +171,16 @@ export default function Progress() {
     increase: 0,
     increasePercent: 0,
   };
-  
+
   if (exerciseHistory && exerciseHistory.length > 0) {
     progressStats.starting = exerciseHistory[0].weight;
     progressStats.current = exerciseHistory[exerciseHistory.length - 1].weight;
     progressStats.increase = progressStats.current - progressStats.starting;
-    progressStats.increasePercent = Math.round((progressStats.increase / progressStats.starting) * 100);
+    progressStats.increasePercent = Math.round(
+      (progressStats.increase / progressStats.starting) * 100,
+    );
   }
-  
+
   // Handle form submission
   const onSubmit = (data: GoalFormValues) => {
     createGoal.mutate(data);
@@ -151,27 +190,36 @@ export default function Progress() {
     <div className="px-4 py-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Progress Tracking</h2>
+          <h2 className="text-lg font-semibold text-gray-800">
+            Progress Tracking
+          </h2>
           <div className="relative">
-            <Select value={selectedExercise} onValueChange={setSelectedExercise}>
+            <Select
+              value={selectedExercise}
+              onValueChange={setSelectedExercise}
+            >
               <SelectTrigger className="w-[140px] h-8 text-sm">
                 <SelectValue placeholder="Select exercise" />
               </SelectTrigger>
               <SelectContent>
                 {EXERCISE_TYPES.map((exercise) => (
-                  <SelectItem key={exercise} value={exercise}>{exercise}</SelectItem>
+                  <SelectItem key={exercise} value={exercise}>
+                    {exercise}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-        
+
         <Card className="mb-6">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">Weight Progress</h3>
+              <h3 className="text-sm font-medium text-gray-700">
+                Weight Progress
+              </h3>
               <div className="flex space-x-1">
-                <Button 
+                <Button
                   size="sm"
                   variant={timeRange === "3M" ? "default" : "outline"}
                   className="text-xs h-6 px-2 py-1"
@@ -179,7 +227,7 @@ export default function Progress() {
                 >
                   3M
                 </Button>
-                <Button 
+                <Button
                   size="sm"
                   variant={timeRange === "6M" ? "default" : "outline"}
                   className="text-xs h-6 px-2 py-1"
@@ -187,7 +235,7 @@ export default function Progress() {
                 >
                   6M
                 </Button>
-                <Button 
+                <Button
                   size="sm"
                   variant={timeRange === "1Y" ? "default" : "outline"}
                   className="text-xs h-6 px-2 py-1"
@@ -197,7 +245,7 @@ export default function Progress() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="h-[200px] w-full">
               {isLoadingHistory ? (
                 <div className="h-full w-full flex items-center justify-center">
@@ -207,68 +255,106 @@ export default function Progress() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={exerciseHistory}>
                     <defs>
-                      <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
+                      <linearGradient
+                        id="colorWeight"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0.8}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0.2}
+                        />
                       </linearGradient>
                     </defs>
-                    <XAxis 
-                      dataKey="formattedDate" 
-                      axisLine={false} 
+                    <XAxis
+                      dataKey="formattedDate"
+                      axisLine={false}
                       tickLine={false}
                     />
-                    <YAxis 
-                      axisLine={false} 
+                    <YAxis
+                      axisLine={false}
                       tickLine={false}
-                      domain={['dataMin - 10', 'dataMax + 10']}
+                      domain={["dataMin - 10", "dataMax + 10"]}
                     />
                     <Tooltip />
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="weight" 
-                      stroke="hsl(var(--primary))" 
+                    <Area
+                      type="monotone"
+                      dataKey="weight"
+                      stroke="hsl(var(--primary))"
                       fillOpacity={1}
-                      fill="url(#colorWeight)" 
+                      fill="url(#colorWeight)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full w-full flex items-center justify-center">
-                  <p className="text-gray-500">No data available for this exercise.</p>
+                  <p className="text-gray-500">
+                    No data available for this exercise.
+                  </p>
                 </div>
               )}
             </div>
-            
+
             <div className="mt-4 grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-xs text-gray-500">Starting</p>
-                <p className="text-lg font-semibold text-gray-800">{progressStats.starting} lbs</p>
+                <p className="text-lg font-semibold text-gray-800">
+                  {progressStats.starting} lbs
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Current</p>
-                <p className="text-lg font-semibold text-primary">{progressStats.current} lbs</p>
+                <p className="text-lg font-semibold text-primary">
+                  {progressStats.current} lbs
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Increase</p>
                 <p className="text-lg font-semibold text-emerald-600">
-                  {progressStats.increasePercent > 0 ? "+" : ""}{progressStats.increasePercent}%
+                  {progressStats.increasePercent > 0 ? "+" : ""}
+                  {progressStats.increasePercent}%
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <div className="mb-6">
-          <h3 className="text-base font-medium text-gray-800 mb-3">Recent Sets</h3>
+          <h3 className="text-base font-medium text-gray-800 mb-3">
+            Recent Sets
+          </h3>
           <Card>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reps</th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Date
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Weight
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Reps
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -289,14 +375,23 @@ export default function Progress() {
                   ) : recentSets && recentSets.length > 0 ? (
                     recentSets.map((set, index) => (
                       <tr key={index}>
-                        <td className="px-4 py-3 text-sm text-gray-900">{set.formattedDate}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{set.weight} lbs</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{set.reps}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {set.formattedDate}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {set.weight} lbs
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {set.reps}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={3} className="px-4 py-4 text-sm text-center text-gray-500">
+                      <td
+                        colSpan={3}
+                        className="px-4 py-4 text-sm text-center text-gray-500"
+                      >
                         No recent sets found for this exercise.
                       </td>
                     </tr>
@@ -306,13 +401,18 @@ export default function Progress() {
             </div>
           </Card>
         </div>
-        
+
         <div>
-          <h3 className="text-base font-medium text-gray-800 mb-3">Set a Goal</h3>
+          <h3 className="text-base font-medium text-gray-800 mb-3">
+            Set a Goal
+          </h3>
           <Card>
             <CardContent className="p-4">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="targetWeight"
@@ -321,19 +421,23 @@ export default function Progress() {
                         <FormLabel>Target Weight</FormLabel>
                         <div className="flex">
                           <FormControl>
-                            <Input 
-                              type="number" 
+                            <Input
+                              type="number"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))} 
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
-                          <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">lbs</span>
+                          <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">
+                            lbs
+                          </span>
                         </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="targetDate"
@@ -347,7 +451,7 @@ export default function Progress() {
                                 variant={"outline"}
                                 className={cn(
                                   "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
+                                  !field.value && "text-muted-foreground",
                                 )}
                               >
                                 {field.value ? (
@@ -372,9 +476,9 @@ export default function Progress() {
                       </FormItem>
                     )}
                   />
-                  
-                  <Button 
-                    type="submit" 
+
+                  <Button
+                    type="submit"
                     className="w-full"
                     disabled={createGoal.isPending}
                   >
