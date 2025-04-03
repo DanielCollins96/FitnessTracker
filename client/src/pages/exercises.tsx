@@ -91,13 +91,22 @@ export default function Exercises() {
   const updateExerciseType = useMutation({
     mutationFn: ({ id, data }: { id: number; data: ExerciseTypeValues }) => 
       apiRequest("PUT", `/api/exercise-types/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (_, { data }) => {
       toast({
         title: "Success",
         description: "Exercise type updated successfully!",
         variant: "default",
       });
+      
+      // Invalidate all relevant caches that might contain the old exercise name
       queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-with-exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      
       setIsEditDialogOpen(false);
       setSelectedExerciseType(null);
     },
@@ -121,7 +130,16 @@ export default function Exercises() {
         description: "Exercise type deleted successfully!",
         variant: "default",
       });
+      
+      // Invalidate all relevant caches
       queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-with-exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-history'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/exercise-sets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
+      
       setIsDeleteDialogOpen(false);
       setSelectedExerciseType(null);
     },
