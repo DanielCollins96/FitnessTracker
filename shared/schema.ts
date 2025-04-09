@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -105,3 +105,58 @@ export const workoutWithExercisesSchema = z.object({
 });
 
 export type WorkoutWithExercises = z.infer<typeof workoutWithExercisesSchema>;
+
+// Workout Routines table
+export const workoutRoutines = pgTable("workout_routines", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  created: timestamp("created").notNull().defaultNow(),
+});
+
+export const insertWorkoutRoutineSchema = createInsertSchema(workoutRoutines).omit({
+  id: true,
+  created: true
+});
+
+export type InsertWorkoutRoutine = z.infer<typeof insertWorkoutRoutineSchema>;
+export type WorkoutRoutine = typeof workoutRoutines.$inferSelect;
+
+// Workout Routine Exercises table
+export const routineExercises = pgTable("routine_exercises", {
+  id: serial("id").primaryKey(),
+  routineId: integer("routine_id").notNull(),
+  exerciseTypeId: integer("exercise_type_id").notNull(),
+  orderIndex: integer("order_index").notNull(), // For ordering exercises in the routine
+  defaultSets: integer("default_sets").default(3),
+  defaultReps: integer("default_reps"),
+  notes: text("notes"),
+});
+
+export const insertRoutineExerciseSchema = createInsertSchema(routineExercises).omit({
+  id: true
+});
+
+export type InsertRoutineExercise = z.infer<typeof insertRoutineExerciseSchema>;
+export type RoutineExercise = typeof routineExercises.$inferSelect;
+
+// Schema for complete routine with exercises
+export const routineWithExercisesSchema = z.object({
+  routine: z.object({
+    id: z.number().optional(),
+    name: z.string(),
+    description: z.string().optional(),
+    category: z.string().optional(),
+  }),
+  exercises: z.array(z.object({
+    exerciseTypeId: z.number(),
+    exerciseName: z.string(), // For display purposes
+    orderIndex: z.number(),
+    defaultSets: z.number().optional(),
+    defaultReps: z.number().optional(),
+    notes: z.string().optional(),
+  })),
+});
+
+export type RoutineWithExercises = z.infer<typeof routineWithExercisesSchema>;

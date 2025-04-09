@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Home, PlusCircle, Clock, BarChart, Dumbbell } from "lucide-react";
+import { Home, PlusCircle, Clock, BarChart, Dumbbell, ClipboardList } from "lucide-react";
 
 interface BottomNavigationProps {
   currentPath: string;
@@ -42,6 +42,12 @@ export default function BottomNavigation({ currentPath }: BottomNavigationProps)
             href="/exercises" 
             isActive={isActive("/exercises")} 
           />
+          <NavButton 
+            icon={<ClipboardList className="h-6 w-6" />} 
+            label="Routines" 
+            href="/routines" 
+            isActive={isActive("/routines")} 
+          />
         </div>
       </div>
     </nav>
@@ -58,10 +64,10 @@ interface NavButtonProps {
 function NavButton({ icon, label, href, isActive }: NavButtonProps) {
   return (
     <Link href={href}>
-      <a className={`flex flex-col items-center py-2 px-3 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
+      <div className={`flex flex-col items-center py-2 px-3 ${isActive ? 'text-primary' : 'text-gray-500'}`}>
         {icon}
         <span className="text-xs mt-1">{label}</span>
-      </a>
+      </div>
     </Link>
   );
 }

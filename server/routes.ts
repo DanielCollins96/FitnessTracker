@@ -1,7 +1,16 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertWorkoutSchema, insertExerciseSchema, insertGoalSchema, workoutWithExercisesSchema, insertExerciseTypeSchema } from "@shared/schema";
+import { 
+  insertWorkoutSchema, 
+  insertExerciseSchema, 
+  insertGoalSchema, 
+  workoutWithExercisesSchema, 
+  insertExerciseTypeSchema,
+  insertWorkoutRoutineSchema,
+  insertRoutineExerciseSchema,
+  routineWithExercisesSchema
+} from "@shared/schema";
 import { format } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -416,6 +425,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching latest exercise data:", error);
       res.status(500).json({ message: "Failed to fetch latest exercise data" });
+    }
+  });
+
+  // Workout Routine routes
+  router.get("/workout-routines", async (req, res) => {
+    try {
+      const routines = await storage.getWorkoutRoutines();
+      res.json(routines);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout routines" });
+    }
+  });
+
+  router.get("/workout-routines/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const routine = await storage.getWorkoutRoutine(id);
+      if (!routine) {
+        return res.status(404).json({ message: "Workout routine not found" });
+      }
+      res.json(routine);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout routine" });
+    }
+  });
+
+  router.post("/workout-routines", async (req, res) => {
+    try {
+      const validatedData = insertWorkoutRoutineSchema.parse(req.body);
+      const routine = await storage.createWorkoutRoutine(validatedData);
+      res.status(201).json(routine);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid workout routine data" });
+    }
+  });
+
+  router.put("/workout-routines/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertWorkoutRoutineSchema.partial().parse(req.body);
+      const routine = await storage.updateWorkoutRoutine(id, validatedData);
+      if (!routine) {
+        return res.status(404).json({ message: "Workout routine not found" });
+      }
+      res.json(routine);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid workout routine data" });
+    }
+  });
+
+  router.delete("/workout-routines/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteWorkoutRoutine(id);
+      if (!result) {
+        return res.status(404).json({ message: "Workout routine not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workout routine" });
+    }
+  });
+
+  // Routine Exercise routes
+  router.get("/workout-routines/:routineId/exercises", async (req, res) => {
+    try {
+      const routineId = parseInt(req.params.routineId);
+      const exercises = await storage.getRoutineExercises(routineId);
+      res.json(exercises);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch routine exercises" });
+    }
+  });
+
+  router.post("/routine-exercises", async (req, res) => {
+    try {
+      const validatedData = insertRoutineExerciseSchema.parse(req.body);
+      const exercise = await storage.createRoutineExercise(validatedData);
+      res.status(201).json(exercise);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid routine exercise data" });
+    }
+  });
+
+  router.put("/routine-exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertRoutineExerciseSchema.partial().parse(req.body);
+      const exercise = await storage.updateRoutineExercise(id, validatedData);
+      if (!exercise) {
+        return res.status(404).json({ message: "Routine exercise not found" });
+      }
+      res.json(exercise);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid routine exercise data" });
+    }
+  });
+
+  router.delete("/routine-exercises/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const result = await storage.deleteRoutineExercise(id);
+      if (!result) {
+        return res.status(404).json({ message: "Routine exercise not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete routine exercise" });
+    }
+  });
+
+  // Combined Routine routes
+  router.post("/routine-with-exercises", async (req, res) => {
+    try {
+      const validatedData = routineWithExercisesSchema.parse(req.body);
+      const result = await storage.createRoutineWithExercises(validatedData);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating routine with exercises:", error);
+      res.status(400).json({ message: "Invalid routine or exercise data" });
+    }
+  });
+
+  router.get("/routine-with-exercises/:routineId", async (req, res) => {
+    try {
+      const routineId = parseInt(req.params.routineId);
+      const result = await storage.getRoutineWithExercises(routineId);
+      if (!result) {
+        return res.status(404).json({ message: "Workout routine not found" });
+      }
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch routine with exercises" });
+    }
+  });
+
+  // Convert a routine to a workout
+  router.post("/convert-routine-to-workout/:routineId", async (req, res) => {
+    try {
+      const routineId = parseInt(req.params.routineId);
+      
+      // Parse the date string to a Date object
+      if (req.body.date && typeof req.body.date === 'string') {
+        req.body.date = new Date(req.body.date);
+      }
+      
+      const result = await storage.convertRoutineToWorkout(routineId, req.body);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error converting routine to workout:", error);
+      res.status(400).json({ message: "Failed to convert routine to workout" });
     }
   });
 

@@ -12,7 +12,14 @@ import {
   exercises,
   workouts,
   goals,
-  exerciseTypes
+  exerciseTypes,
+  workoutRoutines,
+  routineExercises,
+  InsertWorkoutRoutine,
+  InsertRoutineExercise,
+  WorkoutRoutine,
+  RoutineExercise,
+  RoutineWithExercises
 } from "@shared/schema";
 import { db, initializeDatabase } from "./db";
 
@@ -77,6 +84,38 @@ export interface IStorage {
   getLatestExerciseSet(
     exerciseName: string,
   ): Promise<{ weight: number; reps: number } | null>;
+  
+  // Workout Routine operations
+  getWorkoutRoutines(): Promise<WorkoutRoutine[]>;
+  getWorkoutRoutine(id: number): Promise<WorkoutRoutine | undefined>;
+  createWorkoutRoutine(routine: InsertWorkoutRoutine): Promise<WorkoutRoutine>;
+  updateWorkoutRoutine(
+    id: number,
+    routine: Partial<InsertWorkoutRoutine>,
+  ): Promise<WorkoutRoutine | undefined>;
+  deleteWorkoutRoutine(id: number): Promise<boolean>;
+  
+  // Routine Exercise operations
+  getRoutineExercises(routineId: number): Promise<RoutineExercise[]>;
+  getRoutineExercise(id: number): Promise<RoutineExercise | undefined>;
+  createRoutineExercise(routineExercise: InsertRoutineExercise): Promise<RoutineExercise>;
+  updateRoutineExercise(
+    id: number,
+    routineExercise: Partial<InsertRoutineExercise>,
+  ): Promise<RoutineExercise | undefined>;
+  deleteRoutineExercise(id: number): Promise<boolean>;
+  
+  // Combined routine operations
+  createRoutineWithExercises(
+    data: RoutineWithExercises,
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] }>;
+  getRoutineWithExercises(
+    routineId: number,
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] } | undefined>;
+  convertRoutineToWorkout(
+    routineId: number,
+    workoutData: { name?: string; date?: Date; notes?: string },
+  ): Promise<{ workout: Workout; exercises: Exercise[] }>;
 }
 
 export class MemStorage implements IStorage {
@@ -84,20 +123,28 @@ export class MemStorage implements IStorage {
   private exercises: Map<number, Exercise>;
   private goals: Map<number, Goal>;
   private exerciseTypes: Map<number, ExerciseType>;
+  private workoutRoutines: Map<number, WorkoutRoutine>;
+  private routineExercises: Map<number, RoutineExercise>;
   private workoutIdCounter: number;
   private exerciseIdCounter: number;
   private goalIdCounter: number;
   private exerciseTypeIdCounter: number;
+  private routineIdCounter: number;
+  private routineExerciseIdCounter: number;
 
   constructor() {
     this.workouts = new Map();
     this.exercises = new Map();
     this.goals = new Map();
     this.exerciseTypes = new Map();
+    this.workoutRoutines = new Map();
+    this.routineExercises = new Map();
     this.workoutIdCounter = 1;
     this.exerciseIdCounter = 1;
     this.goalIdCounter = 1;
     this.exerciseTypeIdCounter = 1;
+    this.routineIdCounter = 1;
+    this.routineExerciseIdCounter = 1;
 
     // Add some sample data
     this.createExerciseType({
@@ -420,6 +467,180 @@ export class MemStorage implements IStorage {
       weight: heaviestSet.weight,
       reps: heaviestSet.reps
     };
+  }
+  
+  // Workout Routine methods
+  async getWorkoutRoutines(): Promise<WorkoutRoutine[]> {
+    return [...this.workoutRoutines.values()];
+  }
+
+  async getWorkoutRoutine(id: number): Promise<WorkoutRoutine | undefined> {
+    return this.workoutRoutines.get(id);
+  }
+
+  async createWorkoutRoutine(routine: InsertWorkoutRoutine): Promise<WorkoutRoutine> {
+    const id = this.routineIdCounter++;
+    const created = new Date();
+    const newRoutine: WorkoutRoutine = { 
+      ...routine, 
+      id,
+      created, 
+      description: routine.description || null,
+      category: routine.category || null
+    };
+    this.workoutRoutines.set(id, newRoutine);
+    return newRoutine;
+  }
+
+  async updateWorkoutRoutine(
+    id: number,
+    routine: Partial<InsertWorkoutRoutine>
+  ): Promise<WorkoutRoutine | undefined> {
+    const existingRoutine = this.workoutRoutines.get(id);
+    if (!existingRoutine) return undefined;
+    
+    const updatedRoutine = { ...existingRoutine, ...routine };
+    this.workoutRoutines.set(id, updatedRoutine);
+    return updatedRoutine;
+  }
+
+  async deleteWorkoutRoutine(id: number): Promise<boolean> {
+    // Also delete associated routine exercises
+    const routineExercisesToDelete = [...this.routineExercises.values()].filter(
+      re => re.routineId === id
+    );
+    routineExercisesToDelete.forEach(re => this.routineExercises.delete(re.id));
+    
+    return this.workoutRoutines.delete(id);
+  }
+
+  // Routine Exercise methods
+  async getRoutineExercises(routineId: number): Promise<RoutineExercise[]> {
+    return [...this.routineExercises.values()]
+      .filter(re => re.routineId === routineId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  async getRoutineExercise(id: number): Promise<RoutineExercise | undefined> {
+    return this.routineExercises.get(id);
+  }
+
+  async createRoutineExercise(routineExercise: InsertRoutineExercise): Promise<RoutineExercise> {
+    const id = this.routineExerciseIdCounter++;
+    const newRoutineExercise: RoutineExercise = { 
+      ...routineExercise, 
+      id,
+      defaultSets: routineExercise.defaultSets || 3,
+      defaultReps: routineExercise.defaultReps || null,
+      notes: routineExercise.notes || null
+    };
+    this.routineExercises.set(id, newRoutineExercise);
+    return newRoutineExercise;
+  }
+
+  async updateRoutineExercise(
+    id: number,
+    routineExercise: Partial<InsertRoutineExercise>
+  ): Promise<RoutineExercise | undefined> {
+    const existingRoutineExercise = this.routineExercises.get(id);
+    if (!existingRoutineExercise) return undefined;
+    
+    const updatedRoutineExercise = { ...existingRoutineExercise, ...routineExercise };
+    this.routineExercises.set(id, updatedRoutineExercise);
+    return updatedRoutineExercise;
+  }
+
+  async deleteRoutineExercise(id: number): Promise<boolean> {
+    return this.routineExercises.delete(id);
+  }
+
+  // Combined routine operations
+  async createRoutineWithExercises(
+    data: RoutineWithExercises
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] }> {
+    const routine = await this.createWorkoutRoutine({
+      name: data.routine.name,
+      description: data.routine.description || null,
+      category: data.routine.category || null
+    });
+    
+    const routineExercises: RoutineExercise[] = [];
+    for (const exerciseData of data.exercises) {
+      const routineExercise = await this.createRoutineExercise({
+        routineId: routine.id,
+        exerciseTypeId: exerciseData.exerciseTypeId,
+        orderIndex: exerciseData.orderIndex,
+        defaultSets: exerciseData.defaultSets || 3,
+        defaultReps: exerciseData.defaultReps || null,
+        notes: exerciseData.notes || null
+      });
+      routineExercises.push(routineExercise);
+    }
+    
+    return { routine, exercises: routineExercises };
+  }
+
+  async getRoutineWithExercises(
+    routineId: number
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] } | undefined> {
+    const routine = await this.getWorkoutRoutine(routineId);
+    if (!routine) return undefined;
+    
+    const exercises = await this.getRoutineExercises(routineId);
+    return { routine, exercises };
+  }
+
+  async convertRoutineToWorkout(
+    routineId: number,
+    workoutData: { name?: string; date?: Date; notes?: string }
+  ): Promise<{ workout: Workout; exercises: Exercise[] }> {
+    const routineWithExercises = await this.getRoutineWithExercises(routineId);
+    if (!routineWithExercises) {
+      throw new Error(`Routine with id ${routineId} not found`);
+    }
+    
+    const { routine, exercises: routineExercises } = routineWithExercises;
+    
+    // Create a new workout
+    const workout = await this.createWorkout({
+      name: workoutData.name || routine.name,
+      date: workoutData.date || new Date(),
+      notes: workoutData.notes || null
+    });
+    
+    const workoutExercises: Exercise[] = [];
+    
+    // For each routine exercise, create a workout exercise
+    for (const routineExercise of routineExercises) {
+      // Get the exercise type
+      const exerciseType = await this.getExerciseType(routineExercise.exerciseTypeId);
+      if (!exerciseType) continue;
+      
+      // Get default sets and reps
+      const defaultSets = routineExercise.defaultSets || 3;
+      const defaultReps = routineExercise.defaultReps || 10;
+      
+      // Try to get the latest weight for this exercise
+      const latestSet = await this.getLatestExerciseSet(exerciseType.name);
+      const defaultWeight = latestSet ? latestSet.weight : 0;
+      
+      // Create sets with the default values
+      const sets = Array(defaultSets).fill(0).map(() => ({
+        weight: defaultWeight,
+        reps: defaultReps
+      }));
+      
+      // Create the exercise
+      const exercise = await this.createExercise({
+        workoutId: workout.id,
+        name: exerciseType.name,
+        sets
+      });
+      
+      workoutExercises.push(exercise);
+    }
+    
+    return { workout, exercises: workoutExercises };
   }
 }
 

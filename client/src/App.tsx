@@ -10,6 +10,7 @@ import Workout from "@/pages/workout";
 import History from "@/pages/history";
 import Progress from "@/pages/progress";
 import Exercises from "@/pages/exercises";
+import Routines from "@/pages/routines";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,8 @@ function Router() {
           <Route path="/history" component={History} />
           <Route path="/progress" component={Progress} />
           <Route path="/exercises" component={Exercises} />
+          <Route path="/routines" component={Routines} />
+          <Route path="/workout/:id" component={Workout} />
           <Route component={NotFound} />
         </Switch>
       </main>
