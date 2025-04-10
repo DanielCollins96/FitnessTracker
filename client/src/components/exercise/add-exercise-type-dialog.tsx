@@ -54,21 +54,15 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
       
       return response.json();
     },
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       toast({
         title: "Success",
         description: "Exercise type added successfully",
       });
 
-      // Force a refetch of exercise types with a hard reset
-      await queryClient.resetQueries({ queryKey: ["/api/exercise-types"], exact: true });
-      
-      // Call the onSuccess callback if provided after the query has been reset
+      // Call the onSuccess callback directly without invalidating the cache
       if (onSuccess && data) {
-        // Slight delay to ensure the UI has updated with the new data
-        setTimeout(() => {
-          onSuccess({ id: data.id, name: data.name });
-        }, 100);
+        onSuccess({ id: data.id, name: data.name });
       }
 
       // Reset form and close dialog

@@ -141,18 +141,30 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Get exercise types - using a different approach for fetching
-  const { data: exerciseTypes = [], refetch: refetchExerciseTypes } = useQuery({
-    queryKey: ['/api/exercise-types'],
-    queryFn: async () => {
+  // Get exercise types with force refetch on each render to ensure the list is up-to-date
+  const [exerciseTypesList, setExerciseTypesList] = useState<any[]>([]);
+
+  const fetchExerciseTypes = async () => {
+    try {
       const response = await fetch('/api/exercise-types');
-      if (!response.ok) {
-        throw new Error('Failed to fetch exercise types');
+      if (response.ok) {
+        const data = await response.json();
+        setExerciseTypesList(data);
       }
-      return response.json();
-    },
-    staleTime: 0, // Override the global staleTime to ensure fresh data
-  });
+    } catch (error) {
+      console.error('Failed to fetch exercise types:', error);
+    }
+  };
+
+  // Fetch exercise types when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      fetchExerciseTypes();
+    }
+  }, [open]);
+  
+  // Use the state instead of the query data
+  const exerciseTypes = exerciseTypesList;
 
   // Form for routine info
   const routineForm = useForm<RoutineValues>({
@@ -412,13 +424,13 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                                     Add New Exercise Type
                                   </Button>
                                 }
-                                onSuccess={async (newType) => {
-                                  // Manually refetch exercise types to ensure they're updated
-                                  await refetchExerciseTypes();
-                                  
-                                  // Select the newly created exercise type
-                                  field.onChange(newType.id);
-                                  exerciseForm.setValue('exerciseName', newType.name);
+                                onSuccess={(newType) => {
+                                  // Manually fetch exercise types and update the list
+                                  fetchExerciseTypes().then(() => {
+                                    // Select the newly created exercise type
+                                    field.onChange(newType.id);
+                                    exerciseForm.setValue('exerciseName', newType.name);
+                                  });
                                 }}
                               />
                             </div>
