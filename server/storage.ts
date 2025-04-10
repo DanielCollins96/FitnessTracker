@@ -1028,6 +1028,246 @@ export class PostgresStorage implements IStorage {
       reps: heaviestSet.reps
     };
   }
+
+  // Workout Routine operations
+  async getWorkoutRoutines(): Promise<WorkoutRoutine[]> {
+    try {
+      return await db.select().from(workoutRoutines).orderBy(desc(workoutRoutines.created));
+    } catch (error) {
+      console.error("Error getting workout routines:", error);
+      return [];
+    }
+  }
+
+  async getWorkoutRoutine(id: number): Promise<WorkoutRoutine | undefined> {
+    try {
+      const [routine] = await db
+        .select()
+        .from(workoutRoutines)
+        .where(eq(workoutRoutines.id, id))
+        .limit(1);
+      return routine;
+    } catch (error) {
+      console.error("Error getting workout routine:", error);
+      return undefined;
+    }
+  }
+
+  async createWorkoutRoutine(routine: InsertWorkoutRoutine): Promise<WorkoutRoutine> {
+    try {
+      const [newRoutine] = await db
+        .insert(workoutRoutines)
+        .values({
+          ...routine,
+          created: new Date()
+        })
+        .returning();
+      return newRoutine;
+    } catch (error) {
+      console.error("Error creating workout routine:", error);
+      throw error;
+    }
+  }
+
+  async updateWorkoutRoutine(
+    id: number,
+    routine: Partial<InsertWorkoutRoutine>
+  ): Promise<WorkoutRoutine | undefined> {
+    try {
+      const [updatedRoutine] = await db
+        .update(workoutRoutines)
+        .set(routine)
+        .where(eq(workoutRoutines.id, id))
+        .returning();
+      return updatedRoutine;
+    } catch (error) {
+      console.error("Error updating workout routine:", error);
+      return undefined;
+    }
+  }
+
+  async deleteWorkoutRoutine(id: number): Promise<boolean> {
+    try {
+      // First, delete all associated routine exercises
+      await db
+        .delete(routineExercises)
+        .where(eq(routineExercises.routineId, id));
+      
+      // Then delete the routine itself
+      const result = await db
+        .delete(workoutRoutines)
+        .where(eq(workoutRoutines.id, id));
+      
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting workout routine:", error);
+      return false;
+    }
+  }
+
+  // Routine Exercise operations
+  async getRoutineExercises(routineId: number): Promise<RoutineExercise[]> {
+    try {
+      return await db
+        .select()
+        .from(routineExercises)
+        .where(eq(routineExercises.routineId, routineId))
+        .orderBy(routineExercises.orderIndex);
+    } catch (error) {
+      console.error("Error getting routine exercises:", error);
+      return [];
+    }
+  }
+
+  async getRoutineExercise(id: number): Promise<RoutineExercise | undefined> {
+    try {
+      const [routineExercise] = await db
+        .select()
+        .from(routineExercises)
+        .where(eq(routineExercises.id, id))
+        .limit(1);
+      return routineExercise;
+    } catch (error) {
+      console.error("Error getting routine exercise:", error);
+      return undefined;
+    }
+  }
+
+  async createRoutineExercise(routineExercise: InsertRoutineExercise): Promise<RoutineExercise> {
+    try {
+      const [newRoutineExercise] = await db
+        .insert(routineExercises)
+        .values(routineExercise)
+        .returning();
+      return newRoutineExercise;
+    } catch (error) {
+      console.error("Error creating routine exercise:", error);
+      throw error;
+    }
+  }
+
+  async updateRoutineExercise(
+    id: number,
+    routineExercise: Partial<InsertRoutineExercise>
+  ): Promise<RoutineExercise | undefined> {
+    try {
+      const [updatedRoutineExercise] = await db
+        .update(routineExercises)
+        .set(routineExercise)
+        .where(eq(routineExercises.id, id))
+        .returning();
+      return updatedRoutineExercise;
+    } catch (error) {
+      console.error("Error updating routine exercise:", error);
+      return undefined;
+    }
+  }
+
+  async deleteRoutineExercise(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(routineExercises)
+        .where(eq(routineExercises.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting routine exercise:", error);
+      return false;
+    }
+  }
+
+  // Combined routine operations
+  async createRoutineWithExercises(
+    data: RoutineWithExercises
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] }> {
+    try {
+      const routine = await this.createWorkoutRoutine({
+        name: data.routine.name,
+        description: data.routine.description || null,
+        category: data.routine.category || null
+      });
+      
+      const routineExercises: RoutineExercise[] = [];
+      for (const exerciseData of data.exercises) {
+        const routineExercise = await this.createRoutineExercise({
+          routineId: routine.id,
+          exerciseTypeId: exerciseData.exerciseTypeId,
+          orderIndex: exerciseData.orderIndex,
+          defaultSets: exerciseData.defaultSets,
+          defaultReps: exerciseData.defaultReps || null,
+          notes: exerciseData.notes || null
+        });
+        routineExercises.push(routineExercise);
+      }
+      
+      return { routine, exercises: routineExercises };
+    } catch (error) {
+      console.error("Error creating routine with exercises:", error);
+      throw error;
+    }
+  }
+
+  async getRoutineWithExercises(
+    routineId: number
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] } | undefined> {
+    try {
+      const routine = await this.getWorkoutRoutine(routineId);
+      if (!routine) return undefined;
+      
+      const exercises = await this.getRoutineExercises(routineId);
+      
+      return { routine, exercises };
+    } catch (error) {
+      console.error("Error getting routine with exercises:", error);
+      return undefined;
+    }
+  }
+
+  async convertRoutineToWorkout(
+    routineId: number,
+    workoutData: { name?: string; date?: Date; notes?: string }
+  ): Promise<{ workout: Workout; exercises: Exercise[] }> {
+    try {
+      // Get routine with exercises
+      const routineWithExercises = await this.getRoutineWithExercises(routineId);
+      if (!routineWithExercises) {
+        throw new Error(`Routine with ID ${routineId} not found`);
+      }
+      
+      // Create workout
+      const workout = await this.createWorkout({
+        name: workoutData.name || routineWithExercises.routine.name,
+        date: workoutData.date || new Date(),
+        notes: workoutData.notes || (routineWithExercises.routine.description || null),
+        duration: null
+      });
+      
+      // Get exercise type details for each routine exercise
+      const exercisesList: Exercise[] = [];
+      for (const routineExercise of routineWithExercises.exercises) {
+        // Get exercise type details
+        const exerciseType = await this.getExerciseType(routineExercise.exerciseTypeId);
+        if (!exerciseType) continue;
+        
+        // Create exercise from routine exercise
+        const exercise = await this.createExercise({
+          workoutId: workout.id,
+          exerciseTypeId: routineExercise.exerciseTypeId,
+          name: exerciseType.name,
+          sets: routineExercise.defaultSets,
+          reps: routineExercise.defaultReps,
+          weight: null,
+          notes: routineExercise.notes || null
+        });
+        
+        exercisesList.push(exercise);
+      }
+      
+      return { workout, exercises: exercisesList };
+    } catch (error) {
+      console.error("Error converting routine to workout:", error);
+      throw error;
+    }
+  }
   
   // Initialize database with sample data
   async initializeSampleData() {
@@ -1310,6 +1550,113 @@ class StorageAdapter implements IStorage {
     return this.delegate(
       () => this.postgresStorage.getLatestExerciseSet(exerciseName),
       () => this.memStorage.getLatestExerciseSet(exerciseName)
+    );
+  }
+
+  // Workout Routine operations
+  getWorkoutRoutines(): Promise<WorkoutRoutine[]> {
+    return this.delegate(
+      () => this.postgresStorage.getWorkoutRoutines(),
+      () => this.memStorage.getWorkoutRoutines()
+    );
+  }
+
+  getWorkoutRoutine(id: number): Promise<WorkoutRoutine | undefined> {
+    return this.delegate(
+      () => this.postgresStorage.getWorkoutRoutine(id),
+      () => this.memStorage.getWorkoutRoutine(id)
+    );
+  }
+
+  createWorkoutRoutine(routine: InsertWorkoutRoutine): Promise<WorkoutRoutine> {
+    return this.delegate(
+      () => this.postgresStorage.createWorkoutRoutine(routine),
+      () => this.memStorage.createWorkoutRoutine(routine)
+    );
+  }
+
+  updateWorkoutRoutine(
+    id: number,
+    routine: Partial<InsertWorkoutRoutine>
+  ): Promise<WorkoutRoutine | undefined> {
+    return this.delegate(
+      () => this.postgresStorage.updateWorkoutRoutine(id, routine),
+      () => this.memStorage.updateWorkoutRoutine(id, routine)
+    );
+  }
+
+  deleteWorkoutRoutine(id: number): Promise<boolean> {
+    return this.delegate(
+      () => this.postgresStorage.deleteWorkoutRoutine(id),
+      () => this.memStorage.deleteWorkoutRoutine(id)
+    );
+  }
+
+  // Routine Exercise operations
+  getRoutineExercises(routineId: number): Promise<RoutineExercise[]> {
+    return this.delegate(
+      () => this.postgresStorage.getRoutineExercises(routineId),
+      () => this.memStorage.getRoutineExercises(routineId)
+    );
+  }
+
+  getRoutineExercise(id: number): Promise<RoutineExercise | undefined> {
+    return this.delegate(
+      () => this.postgresStorage.getRoutineExercise(id),
+      () => this.memStorage.getRoutineExercise(id)
+    );
+  }
+
+  createRoutineExercise(routineExercise: InsertRoutineExercise): Promise<RoutineExercise> {
+    return this.delegate(
+      () => this.postgresStorage.createRoutineExercise(routineExercise),
+      () => this.memStorage.createRoutineExercise(routineExercise)
+    );
+  }
+
+  updateRoutineExercise(
+    id: number,
+    routineExercise: Partial<InsertRoutineExercise>
+  ): Promise<RoutineExercise | undefined> {
+    return this.delegate(
+      () => this.postgresStorage.updateRoutineExercise(id, routineExercise),
+      () => this.memStorage.updateRoutineExercise(id, routineExercise)
+    );
+  }
+
+  deleteRoutineExercise(id: number): Promise<boolean> {
+    return this.delegate(
+      () => this.postgresStorage.deleteRoutineExercise(id),
+      () => this.memStorage.deleteRoutineExercise(id)
+    );
+  }
+
+  // Combined routine operations
+  createRoutineWithExercises(
+    data: RoutineWithExercises
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] }> {
+    return this.delegate(
+      () => this.postgresStorage.createRoutineWithExercises(data),
+      () => this.memStorage.createRoutineWithExercises(data)
+    );
+  }
+
+  getRoutineWithExercises(
+    routineId: number
+  ): Promise<{ routine: WorkoutRoutine; exercises: RoutineExercise[] } | undefined> {
+    return this.delegate(
+      () => this.postgresStorage.getRoutineWithExercises(routineId),
+      () => this.memStorage.getRoutineWithExercises(routineId)
+    );
+  }
+
+  convertRoutineToWorkout(
+    routineId: number,
+    workoutData: { name?: string; date?: Date; notes?: string }
+  ): Promise<{ workout: Workout; exercises: Exercise[] }> {
+    return this.delegate(
+      () => this.postgresStorage.convertRoutineToWorkout(routineId, workoutData),
+      () => this.memStorage.convertRoutineToWorkout(routineId, workoutData)
     );
   }
 }
