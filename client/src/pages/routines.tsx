@@ -141,10 +141,17 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Get exercise types
+  // Get exercise types - using a different approach for fetching
   const { data: exerciseTypes = [], refetch: refetchExerciseTypes } = useQuery({
     queryKey: ['/api/exercise-types'],
-    queryFn: () => apiRequest('/api/exercise-types'),
+    queryFn: async () => {
+      const response = await fetch('/api/exercise-types');
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercise types');
+      }
+      return response.json();
+    },
+    staleTime: 0, // Override the global staleTime to ensure fresh data
   });
 
   // Form for routine info

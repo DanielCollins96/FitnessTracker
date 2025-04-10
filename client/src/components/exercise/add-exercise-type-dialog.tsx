@@ -38,10 +38,12 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
       description: string | null;
       notes: string | null;
     }) => {
+      // Use a direct fetch with no caching
       const response = await fetch('/api/exercise-types', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache', // Prevent caching
         },
         body: JSON.stringify(data),
       });
@@ -52,18 +54,21 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "Success",
         description: "Exercise type added successfully",
       });
 
-      // Invalidate the exercise types query to refresh the data
-      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
-
-      // Call the onSuccess callback if provided
+      // Force a refetch of exercise types with a hard reset
+      await queryClient.resetQueries({ queryKey: ["/api/exercise-types"], exact: true });
+      
+      // Call the onSuccess callback if provided after the query has been reset
       if (onSuccess && data) {
-        onSuccess({ id: data.id, name: data.name });
+        // Slight delay to ensure the UI has updated with the new data
+        setTimeout(() => {
+          onSuccess({ id: data.id, name: data.name });
+        }, 100);
       }
 
       // Reset form and close dialog
