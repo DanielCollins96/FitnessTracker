@@ -641,7 +641,10 @@ export default function RoutinesPage() {
   // Fetch routines
   const { data: routines = [], isLoading } = useQuery({
     queryKey: ['/api/workout-routines'],
-    queryFn: () => apiRequest('/api/workout-routines'),
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/workout-routines');
+      return response.json();
+    }
   });
 
   const handleStartRoutine = (routine: Routine) => {
