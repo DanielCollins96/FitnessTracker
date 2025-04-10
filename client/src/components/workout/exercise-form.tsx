@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import NumberInput from "@/components/ui/number-input";
 import { useToast } from "@/hooks/use-toast";
+import { AddExerciseTypeDialog } from "@/components/exercise/add-exercise-type-dialog";
 
 interface ExerciseFormProps {
   index: number;
@@ -117,6 +118,20 @@ export default function ExerciseForm({ index, form, exerciseTypes, onRemove }: E
             {exerciseTypes.map((type) => (
               <SelectItem key={type} value={type}>{type}</SelectItem>
             ))}
+            <div className="p-2 border-t">
+              <AddExerciseTypeDialog 
+                trigger={
+                  <Button variant="ghost" size="sm" className="w-full gap-1">
+                    <Plus className="h-4 w-4" />
+                    Add New Exercise Type
+                  </Button>
+                }
+                onSuccess={(newType) => {
+                  // Inform parent component to refresh exercise types
+                  form.setValue(`exercises.${index}.name`, newType.name);
+                }}
+              />
+            </div>
           </SelectContent>
         </Select>
         {form.formState.errors.exercises?.[index]?.name && (

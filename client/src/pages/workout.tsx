@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
+import { AddExerciseTypeDialog } from "@/components/exercise/add-exercise-type-dialog";
 import ExerciseForm from "@/components/workout/exercise-form";
 
 // Form schema

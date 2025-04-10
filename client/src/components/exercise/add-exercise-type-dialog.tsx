@@ -13,9 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 
 interface AddExerciseTypeDialogProps {
   onSuccess?: (exerciseType: { id: number; name: string }) => void;
@@ -28,10 +28,59 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Create mutation for adding a new exercise type
+  const createExerciseTypeMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      category: string | null;
+      description: string | null;
+      notes: string | null;
+    }) => {
+      const response = await fetch('/api/exercise-types', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create exercise type');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: "Exercise type added successfully",
+      });
+
+      // Invalidate the exercise types query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
+
+      // Call the onSuccess callback if provided
+      if (onSuccess && data) {
+        onSuccess({ id: data.id, name: data.name });
+      }
+
+      // Reset form and close dialog
+      resetForm();
+      setOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error adding exercise type:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add exercise type",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) {
       toast({
@@ -42,44 +91,12 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const response = await apiRequest("/api/exercise-types", {
-        method: "POST",
-        data: {
-          name,
-          category: category || null,
-          description: description || null,
-          notes: notes || null,
-        },
-      });
-
-      toast({
-        title: "Success",
-        description: "Exercise type added successfully",
-      });
-
-      // Invalidate the exercise types query to refresh the data
-      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
-
-      // Call the onSuccess callback if provided
-      if (onSuccess && response) {
-        onSuccess(response);
-      }
-
-      // Reset form and close dialog
-      resetForm();
-      setOpen(false);
-    } catch (error) {
-      console.error("Error adding exercise type:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add exercise type",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    createExerciseTypeMutation.mutate({
+      name,
+      category: category || null,
+      description: description || null,
+      notes: notes || null,
+    });
   };
 
   const resetForm = () => {
@@ -158,8 +175,8 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Exercise Type"}
+            <Button type="submit" disabled={createExerciseTypeMutation.isPending}>
+              {createExerciseTypeMutation.isPending ? "Adding..." : "Add Exercise Type"}
             </Button>
           </DialogFooter>
         </form>
