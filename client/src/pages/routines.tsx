@@ -184,7 +184,7 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   // Create routine with exercises
   const createRoutineMutation = useMutation({
     mutationFn: async (data: RoutineWithExercisesValues) => {
-      const response = await apiRequest('POST', '/api/routine-with-exercises', data);
+      const response = await apiRequest('POST', '/api/workout-routines/with-exercises', data);
       return response.json();
     },
     onSuccess: () => {
