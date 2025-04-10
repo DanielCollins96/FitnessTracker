@@ -17,6 +17,17 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 
+// Helper function to prevent auto-selection when typing with shift key
+const handleInputSelection = (e: React.SyntheticEvent, valueLength: number) => {
+  const target = e.target as HTMLInputElement;
+  if (target.selectionStart === 0 && target.selectionEnd === 1 && valueLength === 1) {
+    // If first character is selected, immediately deselect by moving cursor to the end
+    setTimeout(() => {
+      target.setSelectionRange(valueLength, valueLength);
+    }, 0);
+  }
+};
+
 interface AddExerciseTypeDialogProps {
   onSuccess?: (exerciseType: { id: number; name: string }) => void;
   trigger?: React.ReactNode;
@@ -136,6 +147,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
               required
+              onSelect={(e) => handleInputSelection(e, name.length)}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -148,6 +160,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setCategory(e.target.value)}
               className="col-span-3"
               placeholder="e.g., Chest, Legs, Back"
+              onSelect={(e) => handleInputSelection(e, category.length)}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -160,6 +173,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setDescription(e.target.value)}
               className="col-span-3"
               placeholder="Brief description of the exercise"
+              onSelect={(e) => handleInputSelection(e, description.length)}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -172,6 +186,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setNotes(e.target.value)}
               className="col-span-3"
               placeholder="Any additional notes or tips"
+              onSelect={(e) => handleInputSelection(e, notes.length)}
             />
           </div>
           <DialogFooter className="mt-4">
