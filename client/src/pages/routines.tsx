@@ -443,9 +443,9 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                           <FormControl>
                             <Input 
                               type="number" 
-                              min={1} 
+                              min={0} 
                               {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                             />
                           </FormControl>
                           <FormMessage />
