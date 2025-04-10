@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus, Dumbbell, X, ArrowRight, Play } from "lucide-react";
 import { useLocation } from "wouter";
+import { AddExerciseTypeDialog } from "@/components/exercise/add-exercise-type-dialog";
 
 // Define schemas
 const routineSchema = z.object({
@@ -396,6 +397,21 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                                 {type.name}
                               </SelectItem>
                             ))}
+                            <div className="p-2 border-t">
+                              <AddExerciseTypeDialog 
+                                trigger={
+                                  <Button variant="ghost" size="sm" className="w-full gap-1">
+                                    <Plus className="h-4 w-4" />
+                                    Add New Exercise Type
+                                  </Button>
+                                }
+                                onSuccess={(newType) => {
+                                  // Select the newly created exercise type
+                                  field.onChange(newType.id);
+                                  exerciseForm.setValue('exerciseName', newType.name);
+                                }}
+                              />
+                            </div>
                           </SelectContent>
                         </Select>
                         <FormMessage />
