@@ -142,7 +142,7 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const [, setLocation] = useLocation();
 
   // Get exercise types
-  const { data: exerciseTypes = [] } = useQuery({
+  const { data: exerciseTypes = [], refetch: refetchExerciseTypes } = useQuery({
     queryKey: ['/api/exercise-types'],
     queryFn: () => apiRequest('/api/exercise-types'),
   });
@@ -405,7 +405,10 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                                     Add New Exercise Type
                                   </Button>
                                 }
-                                onSuccess={(newType) => {
+                                onSuccess={async (newType) => {
+                                  // Manually refetch exercise types to ensure they're updated
+                                  await refetchExerciseTypes();
+                                  
                                   // Select the newly created exercise type
                                   field.onChange(newType.id);
                                   exerciseForm.setValue('exerciseName', newType.name);
