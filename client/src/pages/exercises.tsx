@@ -8,14 +8,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Pencil, Trash, FileText, BookOpen, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -44,12 +69,13 @@ export default function Exercises() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedExerciseType, setSelectedExerciseType] = useState<ExerciseType | null>(null);
+  const [selectedExerciseType, setSelectedExerciseType] =
+    useState<ExerciseType | null>(null);
   const { toast } = useToast();
 
   // Fetch exercise types
   const { data: exerciseTypes, isLoading } = useQuery<ExerciseType[]>({
-    queryKey: ['/api/exercise-types'],
+    queryKey: ["/api/exercise-types"],
   });
 
   // Form for adding/editing exercise types
@@ -65,7 +91,7 @@ export default function Exercises() {
 
   // Create exercise type mutation
   const createExerciseType = useMutation({
-    mutationFn: (data: ExerciseTypeValues) => 
+    mutationFn: (data: ExerciseTypeValues) =>
       apiRequest("POST", "/api/exercise-types", data),
     onSuccess: () => {
       toast({
@@ -73,7 +99,7 @@ export default function Exercises() {
         description: "Exercise type created successfully!",
         variant: "default",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
       setIsAddDialogOpen(false);
       form.reset();
     },
@@ -89,7 +115,7 @@ export default function Exercises() {
 
   // Update exercise type mutation
   const updateExerciseType = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: ExerciseTypeValues }) => 
+    mutationFn: ({ id, data }: { id: number; data: ExerciseTypeValues }) =>
       apiRequest("PUT", `/api/exercise-types/${id}`, data),
     onSuccess: (_, { data }) => {
       toast({
@@ -97,16 +123,18 @@ export default function Exercises() {
         description: "Exercise type updated successfully!",
         variant: "default",
       });
-      
+
       // Invalidate all relevant caches that might contain the old exercise name
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-with-exercises'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-latest'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-history'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-sets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/workout-with-exercises"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/recent-workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-sets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
+
       setIsEditDialogOpen(false);
       setSelectedExerciseType(null);
     },
@@ -122,7 +150,7 @@ export default function Exercises() {
 
   // Delete exercise type mutation
   const deleteExerciseType = useMutation({
-    mutationFn: (id: number) => 
+    mutationFn: (id: number) =>
       apiRequest("DELETE", `/api/exercise-types/${id}`),
     onSuccess: () => {
       toast({
@@ -130,16 +158,18 @@ export default function Exercises() {
         description: "Exercise type deleted successfully!",
         variant: "default",
       });
-      
+
       // Invalidate all relevant caches
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-with-exercises'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-latest'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-history'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/exercise-sets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/goals'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-types"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/workout-with-exercises"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/recent-workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exercise-sets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
+
       setIsDeleteDialogOpen(false);
       setSelectedExerciseType(null);
     },
@@ -195,9 +225,9 @@ export default function Exercises() {
 
   // Group exercise types by category
   const exerciseTypesByCategory: Record<string, ExerciseType[]> = {};
-  
+
   if (exerciseTypes) {
-    exerciseTypes.forEach(exerciseType => {
+    exerciseTypes.forEach((exerciseType) => {
       const category = exerciseType.category || "Uncategorized";
       if (!exerciseTypesByCategory[category]) {
         exerciseTypesByCategory[category] = [];
@@ -210,8 +240,14 @@ export default function Exercises() {
     <div className="px-4 py-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Exercise Library</h2>
-          <Button onClick={handleAddDialog} size="sm" className="flex items-center gap-1">
+          <h2 className="text-lg font-semibold text-gray-800">
+            Exercise Library
+          </h2>
+          <Button
+            onClick={handleAddDialog}
+            size="sm"
+            className="flex items-center gap-1"
+          >
             <Plus className="h-4 w-4" />
             Add Exercise
           </Button>
@@ -220,7 +256,9 @@ export default function Exercises() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
             <TabsTrigger value="list">All Exercises</TabsTrigger>
-            <TabsTrigger value="detail" disabled={!selectedExerciseType}>Exercise Details</TabsTrigger>
+            <TabsTrigger value="detail" disabled={!selectedExerciseType}>
+              Exercise Details
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="list">
@@ -231,40 +269,64 @@ export default function Exercises() {
                 <Skeleton className="h-14 w-full rounded-md" />
               </div>
             ) : exerciseTypes && exerciseTypes.length > 0 ? (
-              Object.keys(exerciseTypesByCategory).sort().map(category => (
-                <div key={category} className="mb-6">
-                  <h3 className="text-md font-medium text-gray-700 mb-2">{category}</h3>
-                  <div className="space-y-3">
-                    {exerciseTypesByCategory[category].map(exerciseType => (
-                      <Card key={exerciseType.id} className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-base font-medium">{exerciseType.name}</h4>
-                            {exerciseType.description && (
-                              <p className="text-sm text-gray-500 line-clamp-1">{exerciseType.description}</p>
-                            )}
+              Object.keys(exerciseTypesByCategory)
+                .sort()
+                .map((category) => (
+                  <div key={category} className="mb-6">
+                    <h3 className="text-md font-medium text-gray-700 mb-2">
+                      {category}
+                    </h3>
+                    <div className="space-y-3">
+                      {exerciseTypesByCategory[category].map((exerciseType) => (
+                        <Card key={exerciseType.id} className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-base font-medium">
+                                {exerciseType.name}
+                              </h4>
+                              {exerciseType.description && (
+                                <p className="text-sm text-gray-500 line-clamp-1">
+                                  {exerciseType.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(exerciseType)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(exerciseType)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(exerciseType)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewDetails(exerciseType)}>
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(exerciseType)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(exerciseType)}>
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             ) : (
               <div className="text-center py-10">
-                <p className="text-gray-500 mb-4">No exercise types have been added yet.</p>
-                <Button onClick={handleAddDialog}>Add Your First Exercise</Button>
+                <p className="text-gray-500 mb-4">
+                  No exercise types have been added yet.
+                </p>
+                <Button onClick={handleAddDialog}>
+                  Add Your First Exercise
+                </Button>
               </div>
             )}
           </TabsContent>
@@ -275,7 +337,9 @@ export default function Exercises() {
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-xl font-semibold">{selectedExerciseType.name}</h3>
+                      <h3 className="text-xl font-semibold">
+                        {selectedExerciseType.name}
+                      </h3>
                       {selectedExerciseType.category && (
                         <Badge variant="secondary" className="mt-1">
                           {selectedExerciseType.category}
@@ -283,11 +347,19 @@ export default function Exercises() {
                       )}
                     </div>
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(selectedExerciseType)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(selectedExerciseType)}
+                      >
                         <Pencil className="h-4 w-4 mr-2" />
                         Edit
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedExerciseType)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(selectedExerciseType)}
+                      >
                         <Trash className="h-4 w-4 mr-2" />
                         Delete
                       </Button>
@@ -296,8 +368,12 @@ export default function Exercises() {
 
                   {selectedExerciseType.description && (
                     <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
-                      <p className="text-gray-700">{selectedExerciseType.description}</p>
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">
+                        Description
+                      </h4>
+                      <p className="text-gray-700">
+                        {selectedExerciseType.description}
+                      </p>
                     </div>
                   )}
 
@@ -314,7 +390,10 @@ export default function Exercises() {
                   )}
 
                   <div className="mt-6 pt-4 border-t border-gray-200">
-                    <Button variant="outline" onClick={() => setActiveTab("list")}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setActiveTab("list")}
+                    >
                       Back to List
                     </Button>
                   </div>
@@ -334,7 +413,10 @@ export default function Exercises() {
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <FormField
                   control={form.control}
                   name="name"
@@ -355,7 +437,10 @@ export default function Exercises() {
                     <FormItem>
                       <FormLabel>Category</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Chest, Legs, Back" {...field} />
+                        <Input
+                          placeholder="e.g., Chest, Legs, Back"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -368,11 +453,11 @@ export default function Exercises() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Brief description of the exercise" 
-                          className="resize-none" 
+                        <Textarea
+                          placeholder="Brief description of the exercise"
+                          className="resize-none"
                           rows={2}
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -386,11 +471,11 @@ export default function Exercises() {
                     <FormItem>
                       <FormLabel>Form Notes</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Notes on proper form and technique" 
-                          className="resize-none" 
+                        <Textarea
+                          placeholder="Notes on proper form and technique"
+                          className="resize-none"
                           rows={4}
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -398,12 +483,14 @@ export default function Exercises() {
                   )}
                 />
                 <DialogFooter>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full"
                     disabled={createExerciseType.isPending}
                   >
-                    {createExerciseType.isPending ? "Creating..." : "Add Exercise Type"}
+                    {createExerciseType.isPending
+                      ? "Creating..."
+                      : "Add Exercise Type"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -455,11 +542,7 @@ export default function Exercises() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          className="resize-none" 
-                          rows={2}
-                          {...field} 
-                        />
+                        <Textarea className="resize-none" rows={2} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -472,23 +555,21 @@ export default function Exercises() {
                     <FormItem>
                       <FormLabel>Form Notes</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          className="resize-none" 
-                          rows={4}
-                          {...field} 
-                        />
+                        <Textarea className="resize-none" rows={4} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <DialogFooter>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full"
                     disabled={updateExerciseType.isPending}
                   >
-                    {updateExerciseType.isPending ? "Updating..." : "Update Exercise Type"}
+                    {updateExerciseType.isPending
+                      ? "Updating..."
+                      : "Update Exercise Type"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -497,19 +578,25 @@ export default function Exercises() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete the exercise type "{selectedExerciseType?.name}". 
-                This action cannot be undone.
+                This will permanently delete the exercise type "
+                {selectedExerciseType?.name}". This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => selectedExerciseType && deleteExerciseType.mutate(selectedExerciseType.id)}
+              <AlertDialogAction
+                onClick={() =>
+                  selectedExerciseType &&
+                  deleteExerciseType.mutate(selectedExerciseType.id)
+                }
                 className="bg-red-600 hover:bg-red-700"
               >
                 {deleteExerciseType.isPending ? "Deleting..." : "Delete"}
