@@ -141,30 +141,22 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Get exercise types with force refetch on each render to ensure the list is up-to-date
-  const [exerciseTypesList, setExerciseTypesList] = useState<any[]>([]);
-
-  const fetchExerciseTypes = async () => {
-    try {
+  // Use React Query properly for exercise types with proper typing
+  const { data: exerciseTypes = [] } = useQuery<ExerciseType[]>({
+    queryKey: ['/api/exercise-types'],
+    // Set refetchOnMount to ensure the data is fresh when the dialog opens
+    refetchOnMount: 'always',
+    // Set a shorter stale time to ensure data is refreshed frequently
+    staleTime: 1000,
+    // Use proper queryFn with type safety
+    queryFn: async () => {
       const response = await fetch('/api/exercise-types');
-      if (response.ok) {
-        const data = await response.json();
-        setExerciseTypesList(data);
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercise types');
       }
-    } catch (error) {
-      console.error('Failed to fetch exercise types:', error);
-    }
-  };
-
-  // Fetch exercise types when dialog opens
-  React.useEffect(() => {
-    if (open) {
-      fetchExerciseTypes();
-    }
-  }, [open]);
-  
-  // Use the state instead of the query data
-  const exerciseTypes = exerciseTypesList;
+      return response.json();
+    },
+  });
 
   // Form for routine info
   const routineForm = useForm<RoutineValues>({
@@ -425,12 +417,12 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                                   </Button>
                                 }
                                 onSuccess={(newType) => {
-                                  // Manually fetch exercise types and update the list
-                                  fetchExerciseTypes().then(() => {
-                                    // Select the newly created exercise type
-                                    field.onChange(newType.id);
-                                    exerciseForm.setValue('exerciseName', newType.name);
-                                  });
+                                  // Invalidate the query to fetch fresh data
+                                  queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
+                                  
+                                  // Select the newly created exercise type
+                                  field.onChange(newType.id);
+                                  exerciseForm.setValue('exerciseName', newType.name);
                                 }}
                               />
                             </div>
