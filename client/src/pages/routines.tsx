@@ -441,11 +441,11 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                         <FormItem>
                           <FormLabel>Sets</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0} 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            <NumberInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              min={0}
+                              step={1}
                             />
                           </FormControl>
                           <FormMessage />
