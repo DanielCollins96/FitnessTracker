@@ -581,11 +581,12 @@ function StartRoutineDialog({
   const [, setLocation] = useLocation();
   
   const startWorkoutMutation = useMutation({
-    mutationFn: (routineId: number) => 
-      apiRequest(`/api/convert-routine-to-workout/${routineId}`, { 
-        method: 'POST', 
-        data: { date: new Date() } 
-      }),
+    mutationFn: async (routineId: number) => {
+      const response = await apiRequest('POST', `/api/convert-routine-to-workout/${routineId}`, { 
+        date: new Date() 
+      });
+      return response.json();
+    },
     onSuccess: (data) => {
       toast({
         title: 'Workout started',
@@ -597,6 +598,9 @@ function StartRoutineDialog({
       // Navigate to the workout page with the new workout id
       if (data && data.workout && data.workout.id) {
         setLocation(`/workout/${data.workout.id}`);
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        // Alternative data structure where workout data is directly in response
+        setLocation(`/workout/${data.id}`);
       }
     },
     onError: () => {
@@ -1194,6 +1198,12 @@ export default function RoutinesPage() {
         routine={selectedRoutine}
         open={startDialogOpen}
         setOpen={setStartDialogOpen}
+      />
+      
+      <EditRoutineDialog
+        routine={routineWithExercises}
+        open={editDialogOpen}
+        setOpen={setEditDialogOpen}
       />
     </div>
   );
