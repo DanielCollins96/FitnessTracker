@@ -22,7 +22,10 @@ interface AddExerciseTypeDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDialogProps) {
+export function AddExerciseTypeDialog({
+  onSuccess,
+  trigger,
+}: AddExerciseTypeDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -39,19 +42,19 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
       notes: string | null;
     }) => {
       // Use a direct fetch with no caching
-      const response = await fetch('/api/exercise-types', {
-        method: 'POST',
+      const response = await fetch("/api/exercise-types", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache', // Prevent caching
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache", // Prevent caching
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to create exercise type');
+        throw new Error("Failed to create exercise type");
       }
-      
+
       return response.json();
     },
     onSuccess: (data) => {
@@ -76,7 +79,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
         description: "Failed to add exercise type",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,6 +159,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setDescription(e.target.value)}
               className="col-span-3"
               placeholder="Brief description of the exercise"
+              tabIndex={0}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -168,6 +172,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setNotes(e.target.value)}
               className="col-span-3"
               placeholder="Any additional notes or tips"
+              tabIndex={0}
             />
           </div>
           <DialogFooter className="mt-4">
@@ -176,12 +181,14 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
                 Cancel
               </Button>
             </DialogClose>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createExerciseTypeMutation.isPending}
               tabIndex={0}
             >
-              {createExerciseTypeMutation.isPending ? "Adding..." : "Add Exercise Type"}
+              {createExerciseTypeMutation.isPending
+                ? "Adding..."
+                : "Add Exercise Type"}
             </Button>
           </DialogFooter>
         </form>

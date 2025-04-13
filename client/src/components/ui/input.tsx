@@ -7,16 +7,11 @@ export interface InputProps
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
-    // Create a handler for keydown to prevent text selection when using shift key
+    // Create a handler to maintain the original keydown behavior
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       // Call the original onKeyDown handler if it exists
       if (props.onKeyDown) {
         props.onKeyDown(e);
-      }
-      
-      // Prevent text selection when shift key is used for typing capital letters
-      if (e.key === 'Shift') {
-        e.preventDefault();
       }
     };
     

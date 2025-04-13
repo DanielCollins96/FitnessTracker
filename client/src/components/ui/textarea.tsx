@@ -7,16 +7,11 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
-    // Create a handler for keydown to prevent text selection when using shift key
+    // Create a handler to maintain the original keydown behavior
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Call the original onKeyDown handler if it exists
       if (props.onKeyDown) {
         props.onKeyDown(e);
-      }
-      
-      // Prevent text selection when shift key is used for typing capital letters
-      if (e.key === 'Shift') {
-        e.preventDefault();
       }
     };
     
