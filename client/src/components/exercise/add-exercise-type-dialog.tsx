@@ -130,6 +130,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
               required
+              tabIndex={0}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -142,6 +143,7 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
               onChange={(e) => setCategory(e.target.value)}
               className="col-span-3"
               placeholder="e.g., Chest, Legs, Back"
+              tabIndex={0}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -170,11 +172,15 @@ export function AddExerciseTypeDialog({ onSuccess, trigger }: AddExerciseTypeDia
           </div>
           <DialogFooter className="mt-4">
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="outline" tabIndex={0}>
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={createExerciseTypeMutation.isPending}>
+            <Button 
+              type="submit" 
+              disabled={createExerciseTypeMutation.isPending}
+              tabIndex={0}
+            >
               {createExerciseTypeMutation.isPending ? "Adding..." : "Add Exercise Type"}
             </Button>
           </DialogFooter>
