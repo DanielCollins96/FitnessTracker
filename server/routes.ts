@@ -565,6 +565,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update a routine with exercises
+  router.put("/routine-with-exercises/:routineId", async (req, res) => {
+    try {
+      const routineId = parseInt(req.params.routineId);
+      const validatedData = routineWithExercisesSchema.parse(req.body);
+      
+      // First update the routine
+      const updatedRoutine = await storage.updateWorkoutRoutine(
+        routineId, 
+        validatedData.routine
+      );
+      
+      if (!updatedRoutine) {
+        return res.status(404).json({ message: "Workout routine not found" });
+      }
+      
+      // Delete existing routine exercises
+      const existingExercises = await storage.getRoutineExercises(routineId);
+      for (const exercise of existingExercises) {
+        await storage.deleteRoutineExercise(exercise.id);
+      }
+      
+      // Create new routine exercises
+      const newExercises = [];
+      for (const exercise of validatedData.exercises) {
+        const newExercise = await storage.createRoutineExercise({
+          ...exercise,
+          routineId,
+        });
+        newExercises.push(newExercise);
+      }
+      
+      res.status(200).json({
+        routine: updatedRoutine,
+        exercises: newExercises.map(ex => ({
+          ...ex,
+          exerciseName: validatedData.exercises.find(e => e.exerciseTypeId === ex.exerciseTypeId)?.exerciseName || ""
+        }))
+      });
+    } catch (error) {
+      console.error("Error updating routine with exercises:", error);
+      res.status(400).json({ message: "Invalid routine or exercise data" });
+    }
+  });
+
   router.get("/routine-with-exercises/:routineId", async (req, res) => {
     try {
       const routineId = parseInt(req.params.routineId);

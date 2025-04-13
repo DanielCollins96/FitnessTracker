@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +103,15 @@ function RoutineExerciseItem({
   );
 }
 
-function RoutineCard({ routine, onStart }: { routine: Routine; onStart: () => void }) {
+function RoutineCard({ 
+  routine, 
+  onStart, 
+  onEdit 
+}: { 
+  routine: Routine; 
+  onStart: () => void;
+  onEdit: () => void;
+}) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-3">
@@ -119,15 +127,23 @@ function RoutineCard({ routine, onStart }: { routine: Routine; onStart: () => vo
           </CardDescription>
         )}
       </CardContent>
-      <CardFooter className="border-t pt-3 flex justify-between">
+      <CardFooter className="border-t pt-3 flex justify-between gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
         <Button
           variant="default"
           size="sm"
-          className="w-full"
+          className="flex-1"
           onClick={onStart}
         >
           <Play className="mr-2 h-4 w-4" />
-          Start Workout
+          Start
         </Button>
       </CardFooter>
     </Card>
@@ -636,10 +652,460 @@ function StartRoutineDialog({
   );
 }
 
+function EditRoutineDialog({ 
+  routine, 
+  open, 
+  setOpen 
+}: { 
+  routine: RoutineWithExercises | null; 
+  open: boolean; 
+  setOpen: (open: boolean) => void; 
+}) {
+  const [step, setStep] = useState<'info' | 'exercises'>('info');
+  const [exercises, setExercises] = useState<RoutineExerciseValues[]>([]);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // React Query for exercise types
+  const { data: exerciseTypes = [] } = useQuery<ExerciseType[]>({
+    queryKey: ['/api/exercise-types'],
+    refetchOnMount: 'always',
+    staleTime: 1000,
+    queryFn: async () => {
+      const response = await fetch('/api/exercise-types');
+      if (!response.ok) {
+        throw new Error('Failed to fetch exercise types');
+      }
+      return response.json();
+    },
+  });
+
+  // Form for routine info
+  const routineForm = useForm<RoutineValues>({
+    resolver: zodResolver(routineSchema),
+    defaultValues: {
+      name: routine?.routine.name || '',
+      description: routine?.routine.description || '',
+      category: routine?.routine.category || '',
+    },
+  });
+
+  // Reset forms when routine changes
+  useEffect(() => {
+    if (routine) {
+      routineForm.reset({
+        name: routine.routine.name,
+        description: routine.routine.description || '',
+        category: routine.routine.category || '',
+      });
+
+      // Transform routine exercises to match the form format
+      const formattedExercises = routine.exercises.map(ex => ({
+        exerciseTypeId: ex.exerciseTypeId,
+        orderIndex: ex.orderIndex,
+        defaultSets: ex.defaultSets,
+        defaultReps: ex.defaultReps || 0,
+        notes: ex.notes || '',
+        exerciseName: exerciseTypes.find(et => et.id === ex.exerciseTypeId)?.name || '',
+      }));
+
+      setExercises(formattedExercises);
+    }
+  }, [routine, exerciseTypes]);
+  
+  // Form for adding exercises
+  const exerciseForm = useForm<RoutineExerciseValues>({
+    resolver: zodResolver(routineExerciseSchema),
+    defaultValues: {
+      exerciseTypeId: 0,
+      orderIndex: 0,
+      defaultSets: 3,
+      defaultReps: 10,
+      notes: '',
+      exerciseName: '',
+    },
+  });
+
+  // Update routine with exercises
+  const updateRoutineMutation = useMutation({
+    mutationFn: async (data: RoutineWithExercisesValues) => {
+      if (!routine) return null;
+      const response = await apiRequest('PUT', `/api/routine-with-exercises/${routine.routine.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Routine updated',
+        description: 'Your workout routine has been updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-routines'] });
+      setOpen(false);
+      setStep('info');
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update workout routine',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Handle routine info submission
+  const onSubmitInfo = (data: RoutineValues) => {
+    setStep('exercises');
+  };
+
+  // Handle adding an exercise
+  const onAddExercise = (data: RoutineExerciseValues) => {
+    const selectedExerciseType = exerciseTypes.find(et => et.id === data.exerciseTypeId);
+    if (!selectedExerciseType) {
+      toast({
+        title: 'Error',
+        description: 'Please select a valid exercise',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Add the exercise with proper order index and exercise name
+    setExercises([
+      ...exercises,
+      {
+        ...data,
+        orderIndex: exercises.length,
+        exerciseName: selectedExerciseType.name,
+      },
+    ]);
+
+    // Reset form
+    exerciseForm.reset({
+      exerciseTypeId: 0,
+      orderIndex: 0,
+      defaultSets: 3,
+      defaultReps: 10,
+      notes: '',
+      exerciseName: '',
+    });
+  };
+
+  // Handle removing an exercise
+  const handleRemoveExercise = (index: number) => {
+    const newExercises = [...exercises];
+    newExercises.splice(index, 1);
+    
+    // Update order indices
+    const updatedExercises = newExercises.map((ex, idx) => ({
+      ...ex,
+      orderIndex: idx,
+    }));
+    
+    setExercises(updatedExercises);
+  };
+
+  // Handle final submission
+  const handleUpdateRoutine = () => {
+    if (exercises.length === 0) {
+      toast({
+        title: 'No exercises',
+        description: 'Please add at least one exercise to your routine',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    updateRoutineMutation.mutate({
+      routine: routineForm.getValues(),
+      exercises,
+    });
+  };
+
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setStep('info');
+    }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {step === 'info' ? 'Edit Workout Routine' : 'Edit Exercises'}
+          </DialogTitle>
+          <DialogDescription>
+            {step === 'info' 
+              ? 'Update your workout routine details'
+              : 'Modify exercises in your routine'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === 'info' ? (
+          <Form {...routineForm}>
+            <form onSubmit={routineForm.handleSubmit(onSubmitInfo)} className="space-y-4">
+              <FormField
+                control={routineForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Routine Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Upper Body" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={routineForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Strength">Strength</SelectItem>
+                        <SelectItem value="Cardio">Cardio</SelectItem>
+                        <SelectItem value="Full Body">Full Body</SelectItem>
+                        <SelectItem value="Upper Body">Upper Body</SelectItem>
+                        <SelectItem value="Lower Body">Lower Body</SelectItem>
+                        <SelectItem value="Core">Core</SelectItem>
+                        <SelectItem value="Recovery">Recovery</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={routineForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe this routine..."
+                        className="resize-none"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        ) : (
+          <>
+            <div className="space-y-4">
+              <Form {...exerciseForm}>
+                <form 
+                  onSubmit={exerciseForm.handleSubmit(onAddExercise)} 
+                  className="space-y-4 border rounded-md p-4"
+                >
+                  <FormField
+                    control={exerciseForm.control}
+                    name="exerciseTypeId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Exercise</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            const id = parseInt(value);
+                            field.onChange(id);
+                            
+                            // Set exercise name from selected exercise type
+                            const selectedExercise = exerciseTypes.find(et => et.id === id);
+                            if (selectedExercise) {
+                              exerciseForm.setValue('exerciseName', selectedExercise.name);
+                            }
+                          }}
+                          value={field.value ? field.value.toString() : ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an exercise" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {exerciseTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id.toString()}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                            <div className="p-2 border-t">
+                              <AddExerciseTypeDialog 
+                                trigger={
+                                  <Button variant="ghost" size="sm" className="w-full gap-1">
+                                    <Plus className="h-4 w-4" />
+                                    Add New Exercise Type
+                                  </Button>
+                                }
+                                onSuccess={(newType) => {
+                                  // Invalidate the query to fetch fresh data
+                                  queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
+                                  
+                                  // Select the newly created exercise type
+                                  field.onChange(newType.id);
+                                  exerciseForm.setValue('exerciseName', newType.name);
+                                }}
+                              />
+                            </div>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={exerciseForm.control}
+                      name="defaultSets"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sets</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={0} 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={exerciseForm.control}
+                      name="defaultReps"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reps</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={1} 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={exerciseForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Optional notes for this exercise..."
+                            className="resize-none"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Exercise
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Exercises in this Routine</h3>
+                {exercises.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
+                    No exercises added yet
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {exercises.map((exercise, index) => (
+                      <RoutineExerciseItem
+                        key={index}
+                        exercise={exercise}
+                        exerciseTypes={exerciseTypes}
+                        onRemove={() => handleRemoveExercise(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 flex-row sm:flex-row sm:space-x-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setStep('info')}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleUpdateRoutine}
+                disabled={updateRoutineMutation.isPending || exercises.length === 0}
+                className="flex-1"
+              >
+                {updateRoutineMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function RoutinesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [startDialogOpen, setStartDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
+  const [routineWithExercises, setRoutineWithExercises] = useState<RoutineWithExercises | null>(null);
 
   // Fetch routines
   const { data: routines = [], isLoading } = useQuery({
@@ -650,9 +1116,29 @@ export default function RoutinesPage() {
     }
   });
 
+  // Fetch routine with exercises for editing
+  const fetchRoutineWithExercises = async (routineId: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/routine-with-exercises/${routineId}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching routine with exercises:', error);
+      return null;
+    }
+  };
+
   const handleStartRoutine = (routine: Routine) => {
     setSelectedRoutine(routine);
     setStartDialogOpen(true);
+  };
+  
+  const handleEditRoutine = async (routine: Routine) => {
+    const data = await fetchRoutineWithExercises(routine.id);
+    if (data) {
+      setRoutineWithExercises(data);
+      setEditDialogOpen(true);
+    }
   };
 
   return (
@@ -693,6 +1179,7 @@ export default function RoutinesPage() {
               key={routine.id}
               routine={routine}
               onStart={() => handleStartRoutine(routine)}
+              onEdit={() => handleEditRoutine(routine)}
             />
           ))}
         </div>
