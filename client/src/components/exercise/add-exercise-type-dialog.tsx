@@ -1,8 +1,4 @@
-
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,25 +10,12 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-
-const formSchema = z.object({
-  name: z.string().min(1, "Exercise name is required"),
-  category: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-});
 
 interface AddExerciseTypeDialogProps {
   onSuccess?: (exerciseType: { id: number; name: string }) => void;
@@ -44,25 +27,26 @@ export function AddExerciseTypeDialog({
   trigger,
 }: AddExerciseTypeDialogProps) {
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      category: "",
-      description: "",
-      notes: "",
-    },
-  });
-
+  // Create mutation for adding a new exercise type
   const createExerciseTypeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
+    mutationFn: async (data: {
+      name: string;
+      category: string | null;
+      description: string | null;
+      notes: string | null;
+    }) => {
+      // Use a direct fetch with no caching
       const response = await fetch("/api/exercise-types", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache", // Prevent caching
         },
         body: JSON.stringify(data),
       });
@@ -79,11 +63,13 @@ export function AddExerciseTypeDialog({
         description: "Exercise type added successfully",
       });
 
+      // Call the onSuccess callback directly without invalidating the cache
       if (onSuccess && data) {
         onSuccess({ id: data.id, name: data.name });
       }
 
-      form.reset();
+      // Reset form and close dialog
+      resetForm();
       setOpen(false);
     },
     onError: (error) => {
@@ -96,8 +82,30 @@ export function AddExerciseTypeDialog({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createExerciseTypeMutation.mutate(values);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name) {
+      toast({
+        title: "Error",
+        description: "Exercise name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createExerciseTypeMutation.mutate({
+      name,
+      category: category || null,
+      description: description || null,
+      notes: notes || null,
+    });
+  };
+
+  const resetForm = () => {
+    setName("");
+    setCategory("");
+    setDescription("");
+    setNotes("");
   };
 
   return (
@@ -110,96 +118,80 @@ export function AddExerciseTypeDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Exercise Type</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name*</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name*
+            </Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="col-span-3"
+              required
+              tabIndex={0}
             />
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="e.g., Chest, Legs, Back"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="category" className="text-right">
+              Category
+            </Label>
+            <Input
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="col-span-3"
+              placeholder="e.g., Chest, Legs, Back"
+              tabIndex={0}
             />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Brief description of the exercise"
-                      className="resize-none"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="col-span-3"
+              placeholder="Brief description of the exercise"
+              tabIndex={0}
             />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Any additional notes or tips"
-                      className="resize-none"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="notes" className="text-right">
+              Notes
+            </Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="col-span-3"
+              placeholder="Any additional notes or tips"
+              tabIndex={0}
             />
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">
-                  Cancel
-                </Button>
-              </DialogClose>
-              <Button
-                type="submit"
-                disabled={createExerciseTypeMutation.isPending}
-              >
-                {createExerciseTypeMutation.isPending
-                  ? "Adding..."
-                  : "Add Exercise Type"}
+          </div>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" tabIndex={0}>
+                Cancel
               </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={createExerciseTypeMutation.isPending}
+              tabIndex={0}
+            >
+              {createExerciseTypeMutation.isPending
+                ? "Adding..."
+                : "Add Exercise Type"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
