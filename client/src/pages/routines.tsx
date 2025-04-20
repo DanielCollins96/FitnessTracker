@@ -3,12 +3,41 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
@@ -76,16 +105,18 @@ interface RoutineWithExercises {
   exercises: Array<RoutineExercise & { exerciseName: string }>;
 }
 
-function RoutineExerciseItem({ 
-  exercise, 
-  exerciseTypes, 
-  onRemove 
-}: { 
-  exercise: RoutineExerciseValues; 
-  exerciseTypes: ExerciseType[]; 
-  onRemove: () => void; 
+function RoutineExerciseItem({
+  exercise,
+  exerciseTypes,
+  onRemove,
+}: {
+  exercise: RoutineExerciseValues;
+  exerciseTypes: ExerciseType[];
+  onRemove: () => void;
 }) {
-  const exerciseType = exerciseTypes.find(et => et.id === exercise.exerciseTypeId);
+  const exerciseType = exerciseTypes.find(
+    (et) => et.id === exercise.exerciseTypeId,
+  );
 
   return (
     <div className="flex items-center justify-between gap-4 p-3 border rounded-md bg-background">
@@ -95,20 +126,24 @@ function RoutineExerciseItem({
           {exercise.defaultSets} sets × {exercise.defaultReps} reps
         </div>
         {exercise.notes && (
-          <div className="text-xs text-muted-foreground mt-1">{exercise.notes}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {exercise.notes}
+          </div>
         )}
       </div>
-      <Button variant="ghost" size="sm" onClick={onRemove}><X className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="sm" onClick={onRemove}>
+        <X className="h-4 w-4" />
+      </Button>
     </div>
   );
 }
 
-function RoutineCard({ 
-  routine, 
-  onStart, 
-  onEdit 
-}: { 
-  routine: Routine; 
+function RoutineCard({
+  routine,
+  onStart,
+  onEdit,
+}: {
+  routine: Routine;
   onStart: () => void;
   onEdit: () => void;
 }) {
@@ -117,7 +152,9 @@ function RoutineCard({
       <CardHeader className="pb-3">
         <CardTitle>{routine.name}</CardTitle>
         {routine.category && (
-          <Badge variant="outline" className="mt-1 w-fit">{routine.category}</Badge>
+          <Badge variant="outline" className="mt-1 w-fit">
+            {routine.category}
+          </Badge>
         )}
       </CardHeader>
       <CardContent>
@@ -128,12 +165,7 @@ function RoutineCard({
         )}
       </CardContent>
       <CardFooter className="border-t pt-3 flex justify-between gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={onEdit}
-        >
+        <Button variant="outline" size="sm" className="flex-1" onClick={onEdit}>
           Edit
         </Button>
         <Button
@@ -150,8 +182,14 @@ function RoutineCard({
   );
 }
 
-function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
-  const [step, setStep] = useState<'info' | 'exercises'>('info');
+function CreateRoutineDialog({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}) {
+  const [step, setStep] = useState<"info" | "exercises">("info");
   const [exercises, setExercises] = useState<RoutineExerciseValues[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -159,16 +197,16 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
 
   // Use React Query properly for exercise types with proper typing
   const { data: exerciseTypes = [] } = useQuery<ExerciseType[]>({
-    queryKey: ['/api/exercise-types'],
+    queryKey: ["/api/exercise-types"],
     // Set refetchOnMount to ensure the data is fresh when the dialog opens
-    refetchOnMount: 'always',
+    refetchOnMount: "always",
     // Set a shorter stale time to ensure data is refreshed frequently
     staleTime: 1000,
     // Use proper queryFn with type safety
     queryFn: async () => {
-      const response = await fetch('/api/exercise-types');
+      const response = await fetch("/api/exercise-types");
       if (!response.ok) {
-        throw new Error('Failed to fetch exercise types');
+        throw new Error("Failed to fetch exercise types");
       }
       return response.json();
     },
@@ -178,9 +216,9 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const routineForm = useForm<RoutineValues>({
     resolver: zodResolver(routineSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      category: '',
+      name: "",
+      description: "",
+      category: "",
     },
   });
 
@@ -192,52 +230,58 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
       orderIndex: 0,
       defaultSets: 3,
       defaultReps: 10,
-      notes: '',
-      exerciseName: '',
+      notes: "",
+      exerciseName: "",
     },
   });
 
   // Create routine with exercises
   const createRoutineMutation = useMutation({
     mutationFn: async (data: RoutineWithExercisesValues) => {
-      console.log('Creating routine with data:', data);
-      const response = await apiRequest('POST', '/api/routine-with-exercises', data);
+      console.log("Creating routine with data:", data);
+      const response = await apiRequest(
+        "POST",
+        "/api/routine-with-exercises",
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: 'Routine created',
-        description: 'Your workout routine has been created successfully',
+        title: "Routine created",
+        description: "Your workout routine has been created successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-routines'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-routines"] });
       setOpen(false);
-      setStep('info');
+      setStep("info");
       setExercises([]);
       routineForm.reset();
       exerciseForm.reset();
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to create workout routine',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to create workout routine",
+        variant: "destructive",
       });
     },
   });
 
   // Handle routine info submission
   const onSubmitInfo = (data: RoutineValues) => {
-    setStep('exercises');
+    setStep("exercises");
   };
 
   // Handle adding an exercise
   const onAddExercise = (data: RoutineExerciseValues) => {
-    const selectedExerciseType = exerciseTypes.find(et => et.id === data.exerciseTypeId);
+    const selectedExerciseType = exerciseTypes.find(
+      (et) => et.id === data.exerciseTypeId,
+    );
     if (!selectedExerciseType) {
       toast({
-        title: 'Error',
-        description: 'Please select a valid exercise',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please select a valid exercise",
+        variant: "destructive",
       });
       return;
     }
@@ -258,8 +302,8 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
       orderIndex: 0,
       defaultSets: 3,
       defaultReps: 10,
-      notes: '',
-      exerciseName: '',
+      notes: "",
+      exerciseName: "",
     });
   };
 
@@ -267,13 +311,13 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const handleRemoveExercise = (index: number) => {
     const newExercises = [...exercises];
     newExercises.splice(index, 1);
-    
+
     // Update order indices
     const updatedExercises = newExercises.map((ex, idx) => ({
       ...ex,
       orderIndex: idx,
     }));
-    
+
     setExercises(updatedExercises);
   };
 
@@ -281,9 +325,9 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   const handleCreateRoutine = () => {
     if (exercises.length === 0) {
       toast({
-        title: 'No exercises',
-        description: 'Please add at least one exercise to your routine',
-        variant: 'destructive',
+        title: "No exercises",
+        description: "Please add at least one exercise to your routine",
+        variant: "destructive",
       });
       return;
     }
@@ -299,18 +343,21 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === 'info' ? 'Create Workout Routine' : 'Add Exercises'}
+            {step === "info" ? "Create Workout Routine" : "Add Exercises"}
           </DialogTitle>
           <DialogDescription>
-            {step === 'info' 
-              ? 'Create a reusable workout routine that you can start any time'
-              : 'Add exercises to your routine'}
+            {step === "info"
+              ? "Create a reusable workout routine that you can start any time"
+              : "Add exercises to your routine"}
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'info' ? (
+        {step === "info" ? (
           <Form {...routineForm}>
-            <form onSubmit={routineForm.handleSubmit(onSubmitInfo)} className="space-y-4">
+            <form
+              onSubmit={routineForm.handleSubmit(onSubmitInfo)}
+              className="space-y-4"
+            >
               <FormField
                 control={routineForm.control}
                 name="name"
@@ -375,9 +422,9 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
               />
 
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setOpen(false)}
                 >
                   Cancel
@@ -393,8 +440,8 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
           <>
             <div className="space-y-4">
               <Form {...exerciseForm}>
-                <form 
-                  onSubmit={exerciseForm.handleSubmit(onAddExercise)} 
+                <form
+                  onSubmit={exerciseForm.handleSubmit(onAddExercise)}
                   className="space-y-4 border rounded-md p-4"
                 >
                   <FormField
@@ -407,11 +454,16 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                           onValueChange={(value) => {
                             const id = parseInt(value);
                             field.onChange(id);
-                            
+
                             // Set exercise name from selected exercise type
-                            const selectedExercise = exerciseTypes.find(et => et.id === id);
+                            const selectedExercise = exerciseTypes.find(
+                              (et) => et.id === id,
+                            );
                             if (selectedExercise) {
-                              exerciseForm.setValue('exerciseName', selectedExercise.name);
+                              exerciseForm.setValue(
+                                "exerciseName",
+                                selectedExercise.name,
+                              );
                             }
                           }}
                           value={field.value ? field.value.toString() : ""}
@@ -423,25 +475,37 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                           </FormControl>
                           <SelectContent>
                             {exerciseTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
+                              <SelectItem
+                                key={type.id}
+                                value={type.id.toString()}
+                              >
                                 {type.name}
                               </SelectItem>
                             ))}
                             <div className="p-2 border-t">
-                              <AddExerciseTypeDialog 
+                              <AddExerciseTypeDialog
                                 trigger={
-                                  <Button variant="ghost" size="sm" className="w-full gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full gap-1"
+                                  >
                                     <Plus className="h-4 w-4" />
                                     Add New Exercise Type
                                   </Button>
                                 }
                                 onSuccess={(newType) => {
                                   // Invalidate the query to fetch fresh data
-                                  queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
-                                  
+                                  queryClient.invalidateQueries({
+                                    queryKey: ["/api/exercise-types"],
+                                  });
+
                                   // Select the newly created exercise type
                                   field.onChange(newType.id);
-                                  exerciseForm.setValue('exerciseName', newType.name);
+                                  exerciseForm.setValue(
+                                    "exerciseName",
+                                    newType.name,
+                                  );
                                 }}
                               />
                             </div>
@@ -460,11 +524,13 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                         <FormItem>
                           <FormLabel>Sets</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0} 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            <Input
+                              type="number"
+                              min={0}
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -479,11 +545,13 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
                         <FormItem>
                           <FormLabel>Reps</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min={1} 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            <Input
+                              type="number"
+                              min={1}
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -519,7 +587,9 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
               </Form>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Exercises in this Routine</h3>
+                <h3 className="text-sm font-medium">
+                  Exercises in this Routine
+                </h3>
                 {exercises.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
                     No exercises added yet
@@ -540,18 +610,20 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0 flex-row sm:flex-row sm:space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setStep('info')}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("info")}
                 className="flex-1"
               >
                 Back
               </Button>
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 onClick={handleCreateRoutine}
-                disabled={createRoutineMutation.isPending || exercises.length === 0}
+                disabled={
+                  createRoutineMutation.isPending || exercises.length === 0
+                }
                 className="flex-1"
               >
                 {createRoutineMutation.isPending && (
@@ -567,47 +639,51 @@ function CreateRoutineDialog({ open, setOpen }: { open: boolean; setOpen: (open:
   );
 }
 
-function StartRoutineDialog({ 
-  routine, 
-  open, 
-  setOpen 
-}: { 
-  routine: Routine | null; 
-  open: boolean; 
+function StartRoutineDialog({
+  routine,
+  open,
+  setOpen,
+}: {
+  routine: Routine | null;
+  open: boolean;
   setOpen: (open: boolean) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  
+
   const startWorkoutMutation = useMutation({
     mutationFn: async (routineId: number) => {
-      const response = await apiRequest('POST', `/api/convert-routine-to-workout/${routineId}`, { 
-        date: new Date() 
-      });
+      const response = await apiRequest(
+        "POST",
+        `/api/convert-routine-to-workout/${routineId}`,
+        {
+          date: new Date(),
+        },
+      );
       return response.json();
     },
     onSuccess: (data) => {
       toast({
-        title: 'Workout started',
-        description: 'Your workout has been created and is ready to begin',
+        title: "Workout started",
+        description: "Your workout has been created and is ready to begin",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/recent-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/recent-workouts"] });
       setOpen(false);
-      
+
       // Navigate to the workout page with the new workout id
       if (data && data.workout && data.workout.id) {
         setLocation(`/workout/${data.workout.id}`);
-      } else if (data && typeof data === 'object' && 'id' in data) {
+      } else if (data && typeof data === "object" && "id" in data) {
         // Alternative data structure where workout data is directly in response
         setLocation(`/workout/${data.id}`);
       }
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to start workout',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to start workout",
+        variant: "destructive",
       });
     },
   });
@@ -630,10 +706,12 @@ function StartRoutineDialog({
 
         <div className="py-4">
           <p className="text-center mb-4">
-            Start a new workout based on <span className="font-semibold">{routine?.name}</span>?
+            Start a new workout based on{" "}
+            <span className="font-semibold">{routine?.name}</span>?
           </p>
           <p className="text-sm text-muted-foreground text-center">
-            This will create a new workout with all the exercises from this routine.
+            This will create a new workout with all the exercises from this
+            routine.
           </p>
         </div>
 
@@ -641,7 +719,7 @@ function StartRoutineDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleStartWorkout}
             disabled={startWorkoutMutation.isPending}
           >
@@ -656,29 +734,29 @@ function StartRoutineDialog({
   );
 }
 
-function EditRoutineDialog({ 
-  routine, 
-  open, 
-  setOpen 
-}: { 
-  routine: RoutineWithExercises | null; 
-  open: boolean; 
-  setOpen: (open: boolean) => void; 
+function EditRoutineDialog({
+  routine,
+  open,
+  setOpen,
+}: {
+  routine: RoutineWithExercises | null;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }) {
-  const [step, setStep] = useState<'info' | 'exercises'>('info');
+  const [step, setStep] = useState<"info" | "exercises">("info");
   const [exercises, setExercises] = useState<RoutineExerciseValues[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // React Query for exercise types
   const { data: exerciseTypes = [] } = useQuery<ExerciseType[]>({
-    queryKey: ['/api/exercise-types'],
-    refetchOnMount: 'always',
+    queryKey: ["/api/exercise-types"],
+    refetchOnMount: "always",
     staleTime: 1000,
     queryFn: async () => {
-      const response = await fetch('/api/exercise-types');
+      const response = await fetch("/api/exercise-types");
       if (!response.ok) {
-        throw new Error('Failed to fetch exercise types');
+        throw new Error("Failed to fetch exercise types");
       }
       return response.json();
     },
@@ -688,9 +766,9 @@ function EditRoutineDialog({
   const routineForm = useForm<RoutineValues>({
     resolver: zodResolver(routineSchema),
     defaultValues: {
-      name: routine?.routine.name || '',
-      description: routine?.routine.description || '',
-      category: routine?.routine.category || '',
+      name: routine?.routine.name || "",
+      description: routine?.routine.description || "",
+      category: routine?.routine.category || "",
     },
   });
 
@@ -699,24 +777,25 @@ function EditRoutineDialog({
     if (routine) {
       routineForm.reset({
         name: routine.routine.name,
-        description: routine.routine.description || '',
-        category: routine.routine.category || '',
+        description: routine.routine.description || "",
+        category: routine.routine.category || "",
       });
 
       // Transform routine exercises to match the form format
-      const formattedExercises = routine.exercises.map(ex => ({
+      const formattedExercises = routine.exercises.map((ex) => ({
         exerciseTypeId: ex.exerciseTypeId,
         orderIndex: ex.orderIndex,
         defaultSets: ex.defaultSets,
         defaultReps: ex.defaultReps || 0,
-        notes: ex.notes || '',
-        exerciseName: exerciseTypes.find(et => et.id === ex.exerciseTypeId)?.name || '',
+        notes: ex.notes || "",
+        exerciseName:
+          exerciseTypes.find((et) => et.id === ex.exerciseTypeId)?.name || "",
       }));
 
       setExercises(formattedExercises);
     }
   }, [routine, exerciseTypes]);
-  
+
   // Form for adding exercises
   const exerciseForm = useForm<RoutineExerciseValues>({
     resolver: zodResolver(routineExerciseSchema),
@@ -725,8 +804,8 @@ function EditRoutineDialog({
       orderIndex: 0,
       defaultSets: 3,
       defaultReps: 10,
-      notes: '',
-      exerciseName: '',
+      notes: "",
+      exerciseName: "",
     },
   });
 
@@ -734,40 +813,46 @@ function EditRoutineDialog({
   const updateRoutineMutation = useMutation({
     mutationFn: async (data: RoutineWithExercisesValues) => {
       if (!routine) return null;
-      const response = await apiRequest('PUT', `/api/routine-with-exercises/${routine.routine.id}`, data);
+      const response = await apiRequest(
+        "PUT",
+        `/api/routine-with-exercises/${routine.routine.id}`,
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: 'Routine updated',
-        description: 'Your workout routine has been updated successfully',
+        title: "Routine updated",
+        description: "Your workout routine has been updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-routines'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-routines"] });
       setOpen(false);
-      setStep('info');
+      setStep("info");
     },
     onError: () => {
       toast({
-        title: 'Error',
-        description: 'Failed to update workout routine',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update workout routine",
+        variant: "destructive",
       });
     },
   });
 
   // Handle routine info submission
   const onSubmitInfo = (data: RoutineValues) => {
-    setStep('exercises');
+    setStep("exercises");
   };
 
   // Handle adding an exercise
   const onAddExercise = (data: RoutineExerciseValues) => {
-    const selectedExerciseType = exerciseTypes.find(et => et.id === data.exerciseTypeId);
+    const selectedExerciseType = exerciseTypes.find(
+      (et) => et.id === data.exerciseTypeId,
+    );
     if (!selectedExerciseType) {
       toast({
-        title: 'Error',
-        description: 'Please select a valid exercise',
-        variant: 'destructive',
+        title: "Error",
+        description: "Please select a valid exercise",
+        variant: "destructive",
       });
       return;
     }
@@ -788,8 +873,8 @@ function EditRoutineDialog({
       orderIndex: 0,
       defaultSets: 3,
       defaultReps: 10,
-      notes: '',
-      exerciseName: '',
+      notes: "",
+      exerciseName: "",
     });
   };
 
@@ -797,13 +882,13 @@ function EditRoutineDialog({
   const handleRemoveExercise = (index: number) => {
     const newExercises = [...exercises];
     newExercises.splice(index, 1);
-    
+
     // Update order indices
     const updatedExercises = newExercises.map((ex, idx) => ({
       ...ex,
       orderIndex: idx,
     }));
-    
+
     setExercises(updatedExercises);
   };
 
@@ -811,9 +896,9 @@ function EditRoutineDialog({
   const handleUpdateRoutine = () => {
     if (exercises.length === 0) {
       toast({
-        title: 'No exercises',
-        description: 'Please add at least one exercise to your routine',
-        variant: 'destructive',
+        title: "No exercises",
+        description: "Please add at least one exercise to your routine",
+        variant: "destructive",
       });
       return;
     }
@@ -827,7 +912,7 @@ function EditRoutineDialog({
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
-      setStep('info');
+      setStep("info");
     }
   }, [open]);
 
@@ -836,18 +921,21 @@ function EditRoutineDialog({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === 'info' ? 'Edit Workout Routine' : 'Edit Exercises'}
+            {step === "info" ? "Edit Workout Routine" : "Edit Exercises"}
           </DialogTitle>
           <DialogDescription>
-            {step === 'info' 
-              ? 'Update your workout routine details'
-              : 'Modify exercises in your routine'}
+            {step === "info"
+              ? "Update your workout routine details"
+              : "Modify exercises in your routine"}
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'info' ? (
+        {step === "info" ? (
           <Form {...routineForm}>
-            <form onSubmit={routineForm.handleSubmit(onSubmitInfo)} className="space-y-4">
+            <form
+              onSubmit={routineForm.handleSubmit(onSubmitInfo)}
+              className="space-y-4"
+            >
               <FormField
                 control={routineForm.control}
                 name="name"
@@ -912,9 +1000,9 @@ function EditRoutineDialog({
               />
 
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setOpen(false)}
                 >
                   Cancel
@@ -930,8 +1018,8 @@ function EditRoutineDialog({
           <>
             <div className="space-y-4">
               <Form {...exerciseForm}>
-                <form 
-                  onSubmit={exerciseForm.handleSubmit(onAddExercise)} 
+                <form
+                  onSubmit={exerciseForm.handleSubmit(onAddExercise)}
                   className="space-y-4 border rounded-md p-4"
                 >
                   <FormField
@@ -944,11 +1032,16 @@ function EditRoutineDialog({
                           onValueChange={(value) => {
                             const id = parseInt(value);
                             field.onChange(id);
-                            
+
                             // Set exercise name from selected exercise type
-                            const selectedExercise = exerciseTypes.find(et => et.id === id);
+                            const selectedExercise = exerciseTypes.find(
+                              (et) => et.id === id,
+                            );
                             if (selectedExercise) {
-                              exerciseForm.setValue('exerciseName', selectedExercise.name);
+                              exerciseForm.setValue(
+                                "exerciseName",
+                                selectedExercise.name,
+                              );
                             }
                           }}
                           value={field.value ? field.value.toString() : ""}
@@ -960,25 +1053,37 @@ function EditRoutineDialog({
                           </FormControl>
                           <SelectContent>
                             {exerciseTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.id.toString()}>
+                              <SelectItem
+                                key={type.id}
+                                value={type.id.toString()}
+                              >
                                 {type.name}
                               </SelectItem>
                             ))}
                             <div className="p-2 border-t">
-                              <AddExerciseTypeDialog 
+                              <AddExerciseTypeDialog
                                 trigger={
-                                  <Button variant="ghost" size="sm" className="w-full gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full gap-1"
+                                  >
                                     <Plus className="h-4 w-4" />
                                     Add New Exercise Type
                                   </Button>
                                 }
                                 onSuccess={(newType) => {
                                   // Invalidate the query to fetch fresh data
-                                  queryClient.invalidateQueries({ queryKey: ['/api/exercise-types'] });
-                                  
+                                  queryClient.invalidateQueries({
+                                    queryKey: ["/api/exercise-types"],
+                                  });
+
                                   // Select the newly created exercise type
                                   field.onChange(newType.id);
-                                  exerciseForm.setValue('exerciseName', newType.name);
+                                  exerciseForm.setValue(
+                                    "exerciseName",
+                                    newType.name,
+                                  );
                                 }}
                               />
                             </div>
@@ -997,11 +1102,13 @@ function EditRoutineDialog({
                         <FormItem>
                           <FormLabel>Sets</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min={0} 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            <Input
+                              type="number"
+                              min={0}
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -1016,11 +1123,13 @@ function EditRoutineDialog({
                         <FormItem>
                           <FormLabel>Reps</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              min={1} 
-                              {...field} 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            <Input
+                              type="number"
+                              min={1}
+                              {...field}
+                              onChange={(e) =>
+                                field.onChange(parseInt(e.target.value))
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -1056,7 +1165,9 @@ function EditRoutineDialog({
               </Form>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Exercises in this Routine</h3>
+                <h3 className="text-sm font-medium">
+                  Exercises in this Routine
+                </h3>
                 {exercises.length === 0 ? (
                   <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
                     No exercises added yet
@@ -1077,18 +1188,20 @@ function EditRoutineDialog({
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0 flex-row sm:flex-row sm:space-x-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setStep('info')}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("info")}
                 className="flex-1"
               >
                 Back
               </Button>
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 onClick={handleUpdateRoutine}
-                disabled={updateRoutineMutation.isPending || exercises.length === 0}
+                disabled={
+                  updateRoutineMutation.isPending || exercises.length === 0
+                }
                 className="flex-1"
               >
                 {updateRoutineMutation.isPending && (
@@ -1109,25 +1222,29 @@ export default function RoutinesPage() {
   const [startDialogOpen, setStartDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null);
-  const [routineWithExercises, setRoutineWithExercises] = useState<RoutineWithExercises | null>(null);
+  const [routineWithExercises, setRoutineWithExercises] =
+    useState<RoutineWithExercises | null>(null);
 
   // Fetch routines
   const { data: routines = [], isLoading } = useQuery({
-    queryKey: ['/api/workout-routines'],
+    queryKey: ["/api/workout-routines"],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/workout-routines');
+      const response = await apiRequest("GET", "/api/workout-routines");
       return response.json();
-    }
+    },
   });
 
   // Fetch routine with exercises for editing
   const fetchRoutineWithExercises = async (routineId: number) => {
     try {
-      const response = await apiRequest('GET', `/api/routine-with-exercises/${routineId}`);
+      const response = await apiRequest(
+        "GET",
+        `/api/routine-with-exercises/${routineId}`,
+      );
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching routine with exercises:', error);
+      console.error("Error fetching routine with exercises:", error);
       return null;
     }
   };
@@ -1136,7 +1253,7 @@ export default function RoutinesPage() {
     setSelectedRoutine(routine);
     setStartDialogOpen(true);
   };
-  
+
   const handleEditRoutine = async (routine: Routine) => {
     const data = await fetchRoutineWithExercises(routine.id);
     if (data) {
@@ -1149,7 +1266,9 @@ export default function RoutinesPage() {
     <div className="container max-w-4xl py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Workout Routines</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Workout Routines
+          </h1>
           <p className="text-muted-foreground">
             Create and manage reusable workout templates
           </p>
@@ -1189,17 +1308,17 @@ export default function RoutinesPage() {
         </div>
       )}
 
-      <CreateRoutineDialog 
-        open={createDialogOpen} 
-        setOpen={setCreateDialogOpen} 
+      <CreateRoutineDialog
+        open={createDialogOpen}
+        setOpen={setCreateDialogOpen}
       />
-      
+
       <StartRoutineDialog
         routine={selectedRoutine}
         open={startDialogOpen}
         setOpen={setStartDialogOpen}
       />
-      
+
       <EditRoutineDialog
         routine={routineWithExercises}
         open={editDialogOpen}
