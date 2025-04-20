@@ -148,7 +148,7 @@ function RoutineCard({
   onEdit: () => void;
 }) {
   return (
-    <Card className="overflow-hidden w-full h-full flex flex-col">
+    <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle>{routine.name}</CardTitle>
         {routine.category && (
@@ -1296,7 +1296,7 @@ export default function RoutinesPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr max-w-[1200px] mx-auto">
           {routines.map((routine: Routine) => (
             <RoutineCard
               key={routine.id}
