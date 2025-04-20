@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +32,7 @@ export function AddExerciseTypeDialog({
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const { toast } = useToast();
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Create mutation for adding a new exercise type
   const createExerciseTypeMutation = useMutation({
@@ -118,7 +119,10 @@ export function AddExerciseTypeDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        initialFocusRef={nameInputRef}
+      >
         <DialogHeader>
           <DialogTitle>Add New Exercise Type</DialogTitle>
         </DialogHeader>
@@ -129,11 +133,13 @@ export function AddExerciseTypeDialog({
             </Label>
             <Input
               id="name"
+              ref={nameInputRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
               required
               tabIndex={0}
+              autoFocus
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
