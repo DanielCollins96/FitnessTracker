@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -91,6 +91,7 @@ export function AddExerciseTypeDialog({
       setIsAdding(false);
     }
   }
+  const nameInputRef = useRef(null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -102,11 +103,19 @@ export function AddExerciseTypeDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        initialFocusRef={nameInputRef}
+      >
         <DialogHeader>
           <DialogTitle>Add New Exercise Type</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); submitForm(); }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitForm();
+          }}
+        >
           <div className="py-4">
             <div className="mb-4">
               <div className="mb-1">
@@ -149,6 +158,7 @@ export function AddExerciseTypeDialog({
             <div className="mb-4">
               <div className="mb-1">
                 <label
+                  //ref={nameInputRef}
                   htmlFor="exercise-description"
                   className="block text-sm font-medium"
                 >
