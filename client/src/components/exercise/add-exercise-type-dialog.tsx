@@ -6,11 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
 
 interface AddExerciseTypeDialogProps {
   onSuccess?: (exerciseType: { id: number; name: string }) => void;
@@ -22,31 +20,48 @@ export function AddExerciseTypeDialog({
   trigger,
 }: AddExerciseTypeDialogProps) {
   const [open, setOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
 
-  // Create mutation for adding a new exercise type
-  const createExerciseTypeMutation = useMutation({
-    mutationFn: async (data: {
-      name: string;
-      category: string | null;
-      description: string | null;
-      notes: string | null;
-    }) => {
+  async function submitForm() {
+    const nameInput = document.getElementById("exercise-name") as HTMLInputElement;
+    const categoryInput = document.getElementById("exercise-category") as HTMLInputElement;
+    const descriptionInput = document.getElementById("exercise-description") as HTMLTextAreaElement;
+    const notesInput = document.getElementById("exercise-notes") as HTMLTextAreaElement;
+    
+    const name = nameInput?.value;
+    
+    if (!name) {
+      toast({
+        title: "Error",
+        description: "Exercise name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsAdding(true);
+    
+    try {
       const response = await fetch("/api/exercise-types", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          name: name,
+          category: categoryInput?.value || null,
+          description: descriptionInput?.value || null,
+          notes: notesInput?.value || null,
+        }),
       });
 
       if (!response.ok) {
         throw new Error("Failed to create exercise type");
       }
 
-      return response.json();
-    },
-    onSuccess: (data) => {
+      const data = await response.json();
+      
       toast({
         title: "Success",
         description: "Exercise type added successfully",
@@ -57,42 +72,17 @@ export function AddExerciseTypeDialog({
       }
       
       setOpen(false);
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error("Error adding exercise type:", error);
       toast({
         title: "Error",
         description: "Failed to add exercise type",
         variant: "destructive",
       });
-    },
-  });
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    
-    const name = formData.get("name") as string;
-    const category = formData.get("category") as string;
-    const description = formData.get("description") as string;
-    const notes = formData.get("notes") as string;
-    
-    if (!name) {
-      toast({
-        title: "Error",
-        description: "Exercise name is required",
-        variant: "destructive",
-      });
-      return;
+    } finally {
+      setIsAdding(false);
     }
-
-    createExerciseTypeMutation.mutate({
-      name,
-      category: category || null,
-      description: description || null,
-      notes: notes || null,
-    });
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -109,71 +99,86 @@ export function AddExerciseTypeDialog({
           <DialogTitle>Add New Exercise Type</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-1">
-            <label htmlFor="name" className="text-sm font-medium">
-              Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="name"
-              name="name"
-              className="w-full px-3 py-2 border rounded-md"
-              required
-            />
+        <div className="py-4">
+          <div className="mb-4">
+            <div className="mb-1">
+              <label htmlFor="exercise-name" className="block text-sm font-medium">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="exercise-name"
+                className="w-full px-3 py-2 border rounded-md" 
+                tabIndex={1}
+              />
+            </div>
           </div>
           
-          <div className="space-y-1">
-            <label htmlFor="category" className="text-sm font-medium">
-              Category
-            </label>
-            <input
-              id="category"
-              name="category"
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="e.g., Chest, Legs, Back"
-            />
+          <div className="mb-4">
+            <div className="mb-1">
+              <label htmlFor="exercise-category" className="block text-sm font-medium">
+                Category
+              </label>
+              <input
+                type="text"
+                id="exercise-category"
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="e.g., Chest, Legs, Back"
+                tabIndex={2}
+              />
+            </div>
           </div>
           
-          <div className="space-y-1">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="Brief description of the exercise"
-              rows={3}
-            />
+          <div className="mb-4">
+            <div className="mb-1">
+              <label htmlFor="exercise-description" className="block text-sm font-medium">
+                Description
+              </label>
+              <textarea
+                id="exercise-description"
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Brief description of the exercise"
+                rows={3}
+                tabIndex={3}
+              ></textarea>
+            </div>
           </div>
           
-          <div className="space-y-1">
-            <label htmlFor="notes" className="text-sm font-medium">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="Any additional notes or tips"
-              rows={3}
-            />
+          <div className="mb-4">
+            <div className="mb-1">
+              <label htmlFor="exercise-notes" className="block text-sm font-medium">
+                Notes
+              </label>
+              <textarea
+                id="exercise-notes"
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Any additional notes or tips"
+                rows={3}
+                tabIndex={4}
+              ></textarea>
+            </div>
           </div>
           
-          <DialogFooter className="mt-6 gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createExerciseTypeMutation.isPending}
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              type="button"
+              className="px-4 py-2 border rounded-md bg-white text-gray-800"
+              onClick={() => setOpen(false)}
+              tabIndex={6}
             >
-              {createExerciseTypeMutation.isPending
-                ? "Adding..."
-                : "Add Exercise Type"}
-            </Button>
-          </DialogFooter>
-        </form>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-md bg-blue-600 text-white ${isAdding ? 'opacity-50' : ''}`}
+              onClick={submitForm}
+              disabled={isAdding}
+              tabIndex={5}
+            >
+              {isAdding ? "Adding..." : "Add Exercise Type"}
+            </button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
