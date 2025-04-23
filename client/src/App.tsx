@@ -19,7 +19,7 @@ function Router() {
   return (
     <>
       <Header />
-      <main className="pb-16 min-h-screen max-w-md mx-auto">
+      <main className="pb-20 pt-4 min-h-screen max-w-md mx-auto">
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/workout" component={Workout} />
