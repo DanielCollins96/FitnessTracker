@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,14 +7,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 
 interface AddExerciseTypeDialogProps {
@@ -27,12 +22,7 @@ export function AddExerciseTypeDialog({
   trigger,
 }: AddExerciseTypeDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [description, setDescription] = useState("");
-  const [notes, setNotes] = useState("");
   const { toast } = useToast();
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Create mutation for adding a new exercise type
   const createExerciseTypeMutation = useMutation({
@@ -42,12 +32,10 @@ export function AddExerciseTypeDialog({
       description: string | null;
       notes: string | null;
     }) => {
-      // Use a direct fetch with no caching
       const response = await fetch("/api/exercise-types", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache", // Prevent caching
         },
         body: JSON.stringify(data),
       });
@@ -64,13 +52,10 @@ export function AddExerciseTypeDialog({
         description: "Exercise type added successfully",
       });
 
-      // Call the onSuccess callback directly without invalidating the cache
       if (onSuccess && data) {
         onSuccess({ id: data.id, name: data.name });
       }
-
-      // Reset form and close dialog
-      resetForm();
+      
       setOpen(false);
     },
     onError: (error) => {
@@ -83,8 +68,15 @@ export function AddExerciseTypeDialog({
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    
+    const name = formData.get("name") as string;
+    const category = formData.get("category") as string;
+    const description = formData.get("description") as string;
+    const notes = formData.get("notes") as string;
+    
     if (!name) {
       toast({
         title: "Error",
@@ -102,13 +94,6 @@ export function AddExerciseTypeDialog({
     });
   };
 
-  const resetForm = () => {
-    setName("");
-    setCategory("");
-    setDescription("");
-    setNotes("");
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -119,78 +104,69 @@ export function AddExerciseTypeDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent
-        className="sm:max-w-[425px]"
-        initialFocusRef={nameInputRef}
-      >
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Exercise Type</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name*
-            </Label>
-            <Input
+        
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-1">
+            <label htmlFor="name" className="text-sm font-medium">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
               id="name"
-              ref={nameInputRef}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
+              name="name"
+              className="w-full px-3 py-2 border rounded-md"
               required
-              tabIndex={0}
-              autoFocus
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
+          
+          <div className="space-y-1">
+            <label htmlFor="category" className="text-sm font-medium">
               Category
-            </Label>
-            <Input
+            </label>
+            <input
               id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="col-span-3"
+              name="category"
+              className="w-full px-3 py-2 border rounded-md"
               placeholder="e.g., Chest, Legs, Back"
-              tabIndex={0}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
+          
+          <div className="space-y-1">
+            <label htmlFor="description" className="text-sm font-medium">
               Description
-            </Label>
-            <Textarea
+            </label>
+            <textarea
               id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
+              name="description"
+              className="w-full px-3 py-2 border rounded-md"
               placeholder="Brief description of the exercise"
-              tabIndex={0}
+              rows={3}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="notes" className="text-right">
+          
+          <div className="space-y-1">
+            <label htmlFor="notes" className="text-sm font-medium">
               Notes
-            </Label>
-            <Textarea
+            </label>
+            <textarea
               id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="col-span-3"
+              name="notes"
+              className="w-full px-3 py-2 border rounded-md"
               placeholder="Any additional notes or tips"
-              tabIndex={0}
+              rows={3}
             />
           </div>
-          <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" tabIndex={0}>
-                Cancel
-              </Button>
-            </DialogClose>
+          
+          <DialogFooter className="mt-6 gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button
               type="submit"
               disabled={createExerciseTypeMutation.isPending}
-              tabIndex={0}
             >
               {createExerciseTypeMutation.isPending
                 ? "Adding..."
