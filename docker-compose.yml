@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    container_name: fitness-tracker-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://fitness:fitness123@db:5432/fitnessdb
+    depends_on:
+      - db
+
+  # Uncomment this entire section if you want persistent PostgreSQL storage
+  db:
+    image: postgres:16-alpine
+    container_name: fitness-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fitness
+      POSTGRES_PASSWORD: fitness123
+      POSTGRES_DB: fitnessdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
