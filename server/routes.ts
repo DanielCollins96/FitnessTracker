@@ -16,6 +16,23 @@ import { format } from "date-fns";
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
 
+  // Storage diagnostic endpoint
+  router.get("/storage-status", async (req, res) => {
+    try {
+      const storageType = (storage as any).getCurrentStorageType?.() || "Unknown";
+      const isUsingPostgres = (storage as any).isUsingPostgres?.() ?? false;
+      
+      res.json({
+        storageType,
+        isUsingPostgres,
+        warning: !isUsingPostgres ? "⚠️ Using IN-MEMORY storage! Data will be lost on server restart." : null,
+        message: isUsingPostgres ? "✅ Connected to PostgreSQL database" : "🔴 PostgreSQL connection failed, using fallback memory storage"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get storage status" });
+    }
+  });
+
   // Workout routes
   router.get("/workouts", async (req, res) => {
     try {

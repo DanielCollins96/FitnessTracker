@@ -1318,22 +1318,39 @@ class StorageAdapter implements IStorage {
   constructor() {
     this.postgresStorage = new PostgresStorage();
     this.memStorage = new MemStorage();
+    console.log("🔧 StorageAdapter initialized - Starting with PostgreSQL");
+  }
+  
+  // Method to check which storage is currently active
+  isUsingPostgres(): boolean {
+    return this.usePostgres;
+  }
+  
+  getCurrentStorageType(): string {
+    return this.usePostgres ? "PostgreSQL" : "In-Memory";
   }
 
   // Delegate to appropriate storage with fallback
   private async delegate<T>(
     postgresMethod: () => Promise<T>,
-    memMethod: () => Promise<T>
+    memMethod: () => Promise<T>,
+    operationName?: string
   ): Promise<T> {
     if (this.usePostgres) {
       try {
         return await postgresMethod();
       } catch (error) {
-        console.error("PostgreSQL error, falling back to memory storage:", error);
+        console.error(`\n⚠️  PostgreSQL ERROR - Falling back to IN-MEMORY storage ${operationName ? `(during ${operationName})` : ''}`);
+        console.error("Error details:", error);
+        console.error("🔴 ALL SUBSEQUENT DATA WILL BE STORED IN MEMORY ONLY (lost on restart)\n");
         this.usePostgres = false;
         return await memMethod();
       }
     } else {
+      // Already using memory storage - optionally log this
+      if (operationName && Math.random() < 0.1) { // Log occasionally to avoid spam
+        console.log(`💾 Using IN-MEMORY storage for ${operationName}`);
+      }
       return await memMethod();
     }
   }
@@ -1418,7 +1435,8 @@ class StorageAdapter implements IStorage {
   getExerciseTypes(): Promise<ExerciseType[]> {
     return this.delegate(
       () => this.postgresStorage.getExerciseTypes(),
-      () => this.memStorage.getExerciseTypes()
+      () => this.memStorage.getExerciseTypes(),
+      "getExerciseTypes"
     );
   }
 
@@ -1439,7 +1457,8 @@ class StorageAdapter implements IStorage {
   createExerciseType(exerciseType: InsertExerciseType): Promise<ExerciseType> {
     return this.delegate(
       () => this.postgresStorage.createExerciseType(exerciseType),
-      () => this.memStorage.createExerciseType(exerciseType)
+      () => this.memStorage.createExerciseType(exerciseType),
+      "createExerciseType"
     );
   }
 

@@ -119,7 +119,7 @@ export async function seedDatabase() {
       ]);
     }
     
-    // Check if we have goals
+    // Check if we have goals`
     const existingGoals = await db.query.goals.findMany();
     
     if (existingGoals.length === 0) {
