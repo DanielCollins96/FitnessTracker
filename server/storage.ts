@@ -1330,6 +1330,26 @@ class StorageAdapter implements IStorage {
     return this.usePostgres ? "PostgreSQL" : "In-Memory";
   }
 
+  // Check if error is a recoverable database error (like constraint violation)
+  private isRecoverableError(error: any): boolean {
+    // PostgreSQL error codes that are recoverable (user errors, not connection issues)
+    const recoverableErrorCodes = [
+      '23505', // unique_violation
+      '23503', // foreign_key_violation
+      '23502', // not_null_violation
+      '23514', // check_violation
+      '22P02', // invalid_text_representation
+      '22003', // numeric_value_out_of_range
+    ];
+    
+    // Check if it's a Postgres error with a code
+    if (error && typeof error === 'object' && 'code' in error) {
+      return recoverableErrorCodes.includes(error.code);
+    }
+    
+    return false;
+  }
+
   // Delegate to appropriate storage with fallback
   private async delegate<T>(
     postgresMethod: () => Promise<T>,
@@ -1340,7 +1360,14 @@ class StorageAdapter implements IStorage {
       try {
         return await postgresMethod();
       } catch (error) {
-        console.error(`\n⚠️  PostgreSQL ERROR - Falling back to IN-MEMORY storage ${operationName ? `(during ${operationName})` : ''}`);
+        // If it's a recoverable error (like constraint violation), throw it
+        // so the route handler can catch and return the appropriate error message
+        if (this.isRecoverableError(error)) {
+          throw error;
+        }
+        
+        // For connection errors or other critical failures, fall back to memory storage
+        console.error(`\n⚠️  PostgreSQL CONNECTION ERROR - Falling back to IN-MEMORY storage ${operationName ? `(during ${operationName})` : ''}`);
         console.error("Error details:", error);
         console.error("🔴 ALL SUBSEQUENT DATA WILL BE STORED IN MEMORY ONLY (lost on restart)\n");
         this.usePostgres = false;

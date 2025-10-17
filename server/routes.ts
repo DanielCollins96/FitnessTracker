@@ -182,7 +182,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertExerciseTypeSchema.parse(req.body);
       const exerciseType = await storage.createExerciseType(validatedData);
       res.status(201).json(exerciseType);
-    } catch (error) {
+    } catch (error: any) {
+      // Check for duplicate key constraint violation
+      if (error?.code === '23505') {
+        return res.status(409).json({ 
+          message: `An exercise type with the name "${req.body.name}" already exists.` 
+        });
+      }
       res.status(400).json({ message: "Invalid exercise type data" });
     }
   });
@@ -196,7 +202,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Exercise type not found" });
       }
       res.json(exerciseType);
-    } catch (error) {
+    } catch (error: any) {
+      // Check for duplicate key constraint violation
+      if (error?.code === '23505') {
+        return res.status(409).json({ 
+          message: `An exercise type with the name "${req.body.name}" already exists.` 
+        });
+      }
       res.status(400).json({ message: "Invalid exercise type data" });
     }
   });

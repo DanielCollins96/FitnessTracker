@@ -3,8 +3,32 @@ import postgres from "postgres";
 import * as schema from "@shared/schema";
 import { sql } from "drizzle-orm";
 
-// Database connection
-export const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
+// Database connection: prefer TARGET_DATABASE_URL, then DATABASE_URL, then fallback
+function maskConnectionString(conn: string) {
+  try {
+    // mask the password in the authority portion: user:password@ -> user:****@
+    return conn.replace(/(\/\/[^:\/]+:)([^@]+)(@)/, "$1****$3");
+  } catch (e) {
+    return "(masked)";
+  }
+}
+
+const chosenEnv = process.env.TARGET_DATABASE_URL
+  ? "TARGET_DATABASE_URL"
+  : process.env.DATABASE_URL
+  ? "DATABASE_URL"
+  : "DEFAULT_FALLBACK";
+
+export const connectionString =
+  process.env.TARGET_DATABASE_URL || process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/postgres';
+
+// Log chosen connection source (masked to avoid leaking credentials)
+try {
+  console.log(`DB connection source: ${chosenEnv} -> ${maskConnectionString(connectionString)}`);
+} catch (e) {
+  console.log(`DB connection source: ${chosenEnv}`);
+}
+
 export const client = postgres(connectionString);
 export const db = drizzle(client, { schema });
 
